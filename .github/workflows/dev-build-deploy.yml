@@ -1,9 +1,10 @@
 name: Build and Deploy Web app to EC2
+run-name: ${{ github.actor }} triggered the build and deploy to EC2
 
 on:
   push:
     branches:
-      - master
+      - develop
 
 jobs:
     build: 
