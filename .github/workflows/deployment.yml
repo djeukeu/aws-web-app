@@ -1,0 +1,44 @@
+name: Build and Deploy Web app to EC2
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+    build: 
+        runs-on: ubuntu-24.04
+        steps:
+          - name: Checkout
+            uses: actions/checkout@v4
+            with:
+              fetch-depth: 0
+          - name: Read node version 
+            id: nvmrc
+            uses: browniebroke/read-nvmrc-action@v1
+          - name: Setup Nodejs
+            uses: actions/setup-node@v4
+            with:
+              node-version: '${{ steps.nvmrc.outputs.node_version }}'
+          - name: Install project packages
+            run: yarn
+          - name: Build project
+            run: yarn build
+            env: 
+              NODE_OPTIONS: --openssl-legacy-provider
+          - name: Deploy to EC2 instance
+            uses: easingthemes/ssh-deploy@v5.1.0
+            env:
+              SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+              REMOTE_HOST: ${{ secrets.EC2_HOST }}
+              REMOTE_USER: ${{ secrets.EC2_USERNAME }}
+              SOURCE: "./"
+              TARGET: ${{ secrets.EC2_TARGET_DIR }}
+              EXCLUDE: "/node_modules/"
+          - name: Cache node modules
+            uses: actions/cache@v4
+            with:
+              path: node_modules
+              key: ${{ runner.os }}-node-${{ hashFiles('**/package.json') }}
+              restore-keys: |
+                ${{ runner.os }}-node-
