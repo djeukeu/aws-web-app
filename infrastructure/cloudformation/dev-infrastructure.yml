@@ -1,0 +1,50 @@
+---
+Parameters:
+  ImageId:
+    Type: String
+    Description: Unique ID of the image to launch the instance with.        
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    Description: Enter the type of instance you want to launch. 
+  InstanceKeyPair:
+    Type: String
+    Description: SSH key name for the Instance.
+
+Resources:
+  Instance:
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      InstanceInitiatedShutdownBehavior: terminate
+      KeyName: !Ref InstanceKeyPair
+      SecurityGroups:
+        - !Ref SSHSecurityGroup
+        - !Ref ServerSecurityGroup
+  SSHSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access via port 22
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        CidrIp: 0.0.0.0/0
+        FromPort: 22
+        ToPort: 22
+  ServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable public HTTP access to the server via port 80
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        CidrIp: 0.0.0.0/0
+        FromPort: 80
+        ToPort: 80
+
+Outputs:
+  InstancePublicDnsName: 
+    Description: The public DNS Name of the Instance
+    Value: !GetAtt Instance.PublicDnsName
+  InstancePublicIp: 
+    Description: The Public IP Address of the Instance
+    Value: !GetAtt Instance.PublicIp
