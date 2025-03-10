@@ -35,6 +35,20 @@ jobs:
               SOURCE: "./"
               TARGET: ${{ secrets.EC2_TARGET_DIR }}
               EXCLUDE: "/node_modules/"
+          - name: Launch App in the EC2 instance
+            uses: appleboy/ssh-action@master
+            with:
+              host: ${{ secrets.EC2_HOST }}
+              username: ${{ secrets.EC2_USERNAME }}
+              key: ${{ secrets.EC2_SSH_KEY }}
+              script: |
+                sudo yum -y update
+                sudo yum install -y httpd
+                sudo systemctl start httpd
+                sudo systemctl enable httpd
+                cd /home/ec2-user/build
+                sudo mv * /var/www/html
+                sudo systemctl restart httpd
           - name: Cache node modules
             uses: actions/cache@v4
             with:
