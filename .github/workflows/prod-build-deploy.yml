@@ -1,0 +1,72 @@
+name: Build and Deploy Web app to production
+run-name: ${{ github.actor }} triggered the production build and deploy
+
+on:
+  push:
+    branches:
+      - master
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  ECR_REPOSITORY: ${{ secrets.IMAGE_REPOSITORY }}
+
+  # ECS_SERVICE: ${{ secrets.ECS_SERVICE }}
+  # ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
+  # ECS_TASK_DEFINITION: ${{secrets.ECS_TASK_DEFINITION}}
+  # CONTAINER_NAME: ${{ secrets.CONTAINER_NAME }}
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Read node version
+        id: nvmrc
+        uses: browniebroke/read-nvmrc-action@v1
+      - name: Setup Nodejs
+        uses: actions/setup-node@v4
+        with:
+          node-version: '${{ steps.nvmrc.outputs.node_version }}'
+      - uses: xt0rted/setup-dotnet@v1.0.0
+      - name: Setup Gitversion
+        uses: gittools/actions/gitversion/setup@v1.1.1
+        with:
+          versionSpec: '5.12.0'
+      - name: Execute Gitversion
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v1.1.1
+        with:
+          configFilePath: GitVersion.yml
+          useConfigFile: true
+      - name: Install project dependencies
+        run: |
+          yarn
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Login to AWS ECR
+        uses: aws-actions/amazon-ecr-login@v2
+        id: login-ecr
+      - name: Build, tag, and push image to Amazon ECR
+        id: ecr-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ steps.gitversion.outputs.major }}.${{ steps.gitversion.outputs.minor }}.${{ steps.gitversion.outputs.commitsSinceVersionSource }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
