@@ -1,0 +1,106 @@
+---
+Parameters:
+  VpcCidrBlock:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: CIDR Block for the Virtual Private Cloud
+  PublicSubnetCidrBlock:
+    Type: String
+    Default: 10.0.0.0/24
+    Description: CIDR Block for the Public Subnet Segment
+  PublicSubnetAZ:
+    Type: String
+    Default: us-east-2a
+    Description: Avalability Zone for the Public Subnet
+  ImageId:
+    Type: String
+    Description: Unique ID of the image to launch the instance with.        
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    Description: Enter the type of instance you want to launch. 
+  InstanceKeyPair:
+    Type: String
+    Description: SSH key name for the Instance.
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidrBlock
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref PublicSubnetAZ
+      CidrBlock: !Ref PublicSubnetCidrBlock
+      MapPublicIpOnLaunch: true
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: VPC
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties: 
+      VpcId: !Ref VPC
+  RouteTrafficToIGW:
+    Type: AWS::EC2::Route
+    DependsOn:
+      - InternetGateway
+      - AttachGateway
+    Properties: 
+      RouteTableId: !Ref PublicRouteTable
+      GatewayId: !Ref InternetGateway
+      DestinationCidrBlock: 0.0.0.0/0
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+  Instance:
+    Type: AWS::EC2::Instance
+    DependsOn: VPC
+    Properties: 
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      InstanceInitiatedShutdownBehavior: terminate
+      SubnetId: !Ref PublicSubnet
+      KeyName: !Ref InstanceKeyPair
+      SecurityGroupIds:
+        - !GetAtt SSHSecurityGroup.GroupId
+        - !GetAtt ServerSecurityGroup.GroupId
+  SSHSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access via port 22
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        CidrIp: 0.0.0.0/0
+        FromPort: 22
+        ToPort: 22
+  ServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable public HTTP access to the server via port 80
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        CidrIp: 0.0.0.0/0
+        FromPort: 80
+        ToPort: 80
+
+Outputs:
+  InstancePublicDnsName: 
+    Description: The public DNS Name of the Instance
+    Value: !GetAtt Instance.PublicDnsName
+  InstancePublicIp: 
+    Description: The Public IP Address of the Instance
+    Value: !GetAtt Instance.PublicIp
