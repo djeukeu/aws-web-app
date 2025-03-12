@@ -74,29 +74,21 @@ Resources:
       SubnetId: !Ref PublicSubnet
       KeyName: !Ref InstanceKeyPair
       SecurityGroupIds:
-        - !GetAtt SSHSecurityGroup.GroupId
         - !GetAtt ServerSecurityGroup.GroupId
-  SSHSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Enable SSH access via port 22
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-      - IpProtocol: tcp
-        CidrIp: 0.0.0.0/0
-        FromPort: 22
-        ToPort: 22
   ServerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable public HTTP access to the server via port 80
+      GroupDescription: Enable SSH and public HTTP access to the server via port 80
       VpcId: !Ref VPC
       SecurityGroupIngress:
       - IpProtocol: tcp
         CidrIp: 0.0.0.0/0
         FromPort: 80
         ToPort: 80
-
+      - IpProtocol: tcp
+        CidrIp: 0.0.0.0/0
+        FromPort: 22
+        ToPort: 22
 Outputs:
   InstancePublicDnsName: 
     Description: The public DNS Name of the Instance
