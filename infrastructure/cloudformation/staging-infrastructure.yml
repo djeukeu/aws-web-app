@@ -14,11 +14,11 @@ Parameters:
     Description: Avalability Zone for the Public Subnet
   ImageId:
     Type: String
-    Description: Unique ID of the image to launch the instance with.        
+    Description: Unique ID of the image to launch the instance with.
   InstanceType:
     Type: String
     Default: t2.micro
-    Description: Enter the type of instance you want to launch. 
+    Description: Enter the type of instance you want to launch.
   InstanceKeyPair:
     Type: String
     Description: SSH key name for the Instance.
@@ -48,14 +48,14 @@ Resources:
       InternetGatewayId: !Ref InternetGateway
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
-    Properties: 
+    Properties:
       VpcId: !Ref VPC
   RouteTrafficToIGW:
     Type: AWS::EC2::Route
     DependsOn:
       - InternetGateway
       - AttachGateway
-    Properties: 
+    Properties:
       RouteTableId: !Ref PublicRouteTable
       GatewayId: !Ref InternetGateway
       DestinationCidrBlock: 0.0.0.0/0
@@ -67,7 +67,7 @@ Resources:
   Instance:
     Type: AWS::EC2::Instance
     DependsOn: VPC
-    Properties: 
+    Properties:
       ImageId: !Ref ImageId
       InstanceType: !Ref InstanceType
       InstanceInitiatedShutdownBehavior: terminate
@@ -81,18 +81,18 @@ Resources:
       GroupDescription: Enable SSH and public HTTP access to the server via port 80
       VpcId: !Ref VPC
       SecurityGroupIngress:
-      - IpProtocol: tcp
-        CidrIp: 0.0.0.0/0
-        FromPort: 80
-        ToPort: 80
-      - IpProtocol: tcp
-        CidrIp: 0.0.0.0/0
-        FromPort: 22
-        ToPort: 22
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 80
+          ToPort: 80
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 22
+          ToPort: 22
 Outputs:
-  InstancePublicDnsName: 
+  InstancePublicDnsName:
     Description: The public DNS Name of the Instance
     Value: !GetAtt Instance.PublicDnsName
-  InstancePublicIp: 
+  InstancePublicIp:
     Description: The Public IP Address of the Instance
     Value: !GetAtt Instance.PublicIp
