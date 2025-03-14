@@ -1,5 +1,8 @@
 ---
 Parameters:
+  AppName:
+    Type: String
+    Description: The name associate with the project
   UserName:
     Type: String
     Description: The name of the IAM user for the access key
@@ -9,11 +12,11 @@ Parameters:
     Description: Health Check path for the server
   ContainerPort:
     Type: Number
-    Default: 80
+    Default: '80'
     Description: Open port for the container
   DesiredCapacity:
     Type: Number
-    Default: 1
+    Default: '1'
     Description: Number of instances to launch in the ECS cluster.
 
 Resources:
@@ -29,21 +32,21 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       AvailabilityZone: !Sub ${AWS::Region}a
-      CidrBlock: 10.0.0.0/16
+      CidrBlock: 10.0.0.0/24
       MapPublicIpOnLaunch: true
   PublicSubnetB:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
       AvailabilityZone: !Sub ${AWS::Region}b
-      CidrBlock: 10.0.16.0/16
+      CidrBlock: 10.0.16.0/24
       MapPublicIpOnLaunch: true
   PublicSubnetC:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
       AvailabilityZone: !Sub ${AWS::Region}c
-      CidrBlock: 10.0.32.0/16
+      CidrBlock: 10.0.32.0/24
       MapPublicIpOnLaunch: true
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -60,7 +63,7 @@ Resources:
   RouteTrafficToIGW:
     Type: AWS::EC2::Route
     DependsOn:
-      - InternetGateway
+      # - InternetGateway
       - AttachGateway
     Properties:
       RouteTableId: !Ref PublicRouteTable
@@ -104,7 +107,7 @@ Resources:
   HttpTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      Name: !Sub ${AWS::StackName}-tg
+      Name: !Sub ${AppName}-tg
       HealthCheckIntervalSeconds: 30
       HealthCheckPath: !Ref HealthCheckPath
       HealthCheckProtocol: HTTP
@@ -127,7 +130,7 @@ Resources:
   ApplicationLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Name: !Sub ${AWS::StackName}-alb
+      Name: !Sub ${AppName}-alb
       Scheme: "internet-facing"
       Type: "application"
       Subnets: 
@@ -140,11 +143,11 @@ Resources:
   ECRRepository:
     Type: AWS::ECR::Repository
     Properties:
-      RepositoryName: !Sub ${AWS::StackName}-repo
+      RepositoryName: !Sub ${AppName}-repo
   ServerCluster: 
-    Type: AWS::ECS::CLUSTER
+    Type: AWS::ECS::Cluster
     Properties:
-      ClusterName: !Sub ${AWS::StackName}-cluster
+      ClusterName: !Sub ${AppName}-cluster
       CapacityProviders:
         - FARGATE
   TaskDefinition:
@@ -155,9 +158,9 @@ Resources:
     Properties:
       RequiresCompatibilities:
         - FARGATE
-      Family: !Ref ${AWS::StackName}
+      Family: !Ref AppName
       ContainerDefinitions:
-        - name: !Ref ${AWS::StackName}
+        - Name: !Ref AppName
           Image: !Join 
             - ':'
             - - !Join 
@@ -168,14 +171,14 @@ Resources:
           Essential: true
           PortMappings:
             - HostPort: !Ref ContainerPort
-              protocol: tcp
+              Protocol: tcp
               ContainerPort: !Ref ContainerPort
       NetworkMode: awsvpc
       Memory: '512'
       Cpu: '256'
       ExecutionRoleArn: !Ref ECSTaskExecutionRole
   User:
-    Type: AWS::IAM:User
+    Type: AWS::IAM::User
     Properties:
       UserName: !Ref UserName
   MyAccessKey:
@@ -186,7 +189,7 @@ Resources:
   ECSTaskExecutionRole:
     Type: 'AWS::IAM::Role'
     Properties:
-      RoleName: !Sub ${AWS::StackName}-role
+      RoleName: !Sub ${AppName}-role
       AssumeRolePolicyDocument:
         Version: "2008-10-17"
         Statement:
@@ -197,7 +200,7 @@ Resources:
             Action:
               - 'sts:AssumeRole'
       Policies:
-        - PolicyName: !Sub ${AWS::StackName}-role-policy
+        - PolicyName: !Sub ${AppName}-role-policy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -211,11 +214,11 @@ Resources:
                   - "logs:PutLogEvents"
                 Resource: !GetAtt ECRRepository.Arn
   UserInlinePolicy:
-    Type: AWS::IAM:Policy
+    Type: AWS::IAM::Policy
     DependsOn:
       - ECRRepository
     Properties:
-      PolicyName: !Sub ${AWS::StackName}-policy
+      PolicyName: !Sub ${AppName}-policy
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -252,13 +255,13 @@ Resources:
               - 'ecs:UpdateService'
               - 'ecs:DescribeServices'
             Resource: !Ref ECSService
-      User:
+      Users:
         - !Ref User
   ECSService:
     Type: 'AWS::ECS::Service'
     DependsOn: TaskDefinition
     Properties:
-      ServiceName: !Sub ${AWS::StackName}
+      ServiceName: !Ref AppName
       Cluster: !GetAtt ServerCluster.Arn
       LaunchType: FARGATE
       DesiredCount: !Ref DesiredCapacity
@@ -277,7 +280,7 @@ Resources:
             - !Ref PublicSubnetC
           AssignPublicIp: ENABLED
       LoadBalancers:
-        - ContainerName: !Ref ${AWS::StackName}
+        - ContainerName: !Ref AppName
           ContainerPort: !Ref ContainerPort
           TargetGroupArn: !Ref HttpTargetGroup
           LoadBalancerName: !GetAtt ApplicationLoadBalancer.LoadBalancerName
@@ -289,7 +292,7 @@ Outputs:
     Value: !GetAtt ApplicationLoadBalancer.DNSName
   UserAccessKeyId:
     Description: User access key ID
-    Value: !GetAtt MyAccessKey.Id
+    Value: !Ref MyAccessKey
   UserAccessKeySecret:
     Description: User secret access key
     Value: !GetAtt MyAccessKey.SecretAccessKey
