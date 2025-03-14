@@ -1,8 +1,8 @@
 ---
 Parameters:
-  # UserName:
-  #   Type: String
-  #   Description: The name of the IAM user for the access key
+  UserName:
+    Type: String
+    Description: The name of the IAM user for the access key
   HealthCheckPath:
     Type: String
     Default: /
