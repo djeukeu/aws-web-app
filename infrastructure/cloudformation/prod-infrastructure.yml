@@ -3,6 +3,14 @@ Parameters:
   UserName:
     Type: String
     Description: The name of the IAM user for the access key
+  HealthCheckPath:
+    Type: String
+    Default: /
+    Description: Health Check path for the container
+  ContainerPort:
+    Type: Number
+    Default: 80
+    Description: Open Port for the container
 
 Resources:
   User:
@@ -16,8 +24,10 @@ Resources:
       Status: 'Active'
   UserInlinePolicy:
     Type: AWS::IAM:Policy
+    DependsOn:
+      - ECRRepository
     Properties:
-      PolicyName: !Ref 'AWS::StackName'
+      PolicyName: !Sub ${AWS::StackName}-policy
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -33,7 +43,7 @@ Resources:
               - 'ecr:BatchImportUpstreamImage'
               - 'ecr:GetDownloadUrlForLayer'
               - 'ecr:GetImageCopyStatus'
-            Resource: !GetAtt ECRRegistry.Arn
+            Resource: !GetAtt ECRRepository.Arn
           - Effect: 'Allow'
             Action:
               - 'ecr:GetAuthorizationToken'
@@ -56,11 +66,70 @@ Resources:
             # Resource: ""
       User:
         - !Ref User
-  ECRRegistry:
+  ECRRepository:
     Type: AWS::ECR::Repository
     Properties:
       RepositoryName: !Sub ${AWS::StackName}-repo
-      ImageTagMutability: 'IMMUTABLE'
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    DependsOn:
+      - HttpTargetGroup
+      # - ALBListenerRule
+    Properties:
+      RequiresCompatibilities:
+        - FARGATE
+      Family: !Sub ${AWS::StackName}
+      ContainerDefinitions:
+        - name: !Sub ${AWS::StackName}
+          Image: !Join 
+            - ':'
+            - - !Join 
+                - /
+                - - !GetAtt ECRRepository.Arn
+                  - !Ref ECRRepository
+              - latest
+          Essential: true
+          PortMappings:
+            - HostPort: !Ref ContainerPort
+              protocol: tcp
+              ContainerPort: !Ref ContainerPort
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Join 
+                - /
+                - ecs
+                  - !Sub ${AWS::StackName}
+              awslogs-region: us-east-2
+              awslogs-stream-prefix: ecs
+      NetworkMode: awsvpc
+      Memory: '512'
+      Cpu: '256'
+      # TaskRoleArn: !Ref ECSTaskRoleArn
+      # ExecutionRoleArn: !Ref ECSTaskExecutionRoleArn
+
+  HttpTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${AWS::StackName}-tg
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: !Ref HealthCheckPath
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 3
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref VpcId
+      TargetType: ip
+  # ALBListenerRule:
+  #   Type: AWS::ElasticLoadBalancingV2::Listener
+  ECSService:
+    # Type: 'AWS::ECS::Service'
+    # DependsOn: TaskDefinition
+    # Properties:
+    #   ServiceName: !Ref ECSServiceName
+  
 
 Outputs:
   UserAccessKeyId:
