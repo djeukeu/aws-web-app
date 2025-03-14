@@ -1,16 +1,20 @@
 ---
 Parameters:
-  UserName:
-    Type: String
-    Description: The name of the IAM user for the access key
+  # UserName:
+  #   Type: String
+  #   Description: The name of the IAM user for the access key
   HealthCheckPath:
     Type: String
     Default: /
-    Description: Health Check path for the container
+    Description: Health Check path for the server
   ContainerPort:
     Type: Number
     Default: 80
-    Description: Open Port for the container
+    Description: Open port for the container
+  DesiredCapacity:
+    Type: Number
+    Default: 1
+    Description: Number of instances to launch in the ECS cluster.
 
 Resources:
   VPC:
@@ -77,7 +81,99 @@ Resources:
     Properties:
       SubnetId: !Ref PublicSubnetC
       RouteTableId: !Ref PublicRouteTable
-
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Application load balancer security group for HTTP access
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 80
+          ToPort: 80
+  ServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable access to the server
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 3000
+          ToPort: 3000
+  HttpTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${AWS::StackName}-tg
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: !Ref HealthCheckPath
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 3
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref VPC
+      TargetType: ip
+  HTTPListener:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: "HTTP"
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref HttpTargetGroup
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${AWS::StackName}-alb
+      Scheme: "internet-facing"
+      Type: "application"
+      Subnets: 
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetB
+        - !Ref PublicSubnetC
+      SecurityGroups: 
+        - !Ref ALBSecurityGroup
+      IpAddressType: "ipv4"
+  ECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub ${AWS::StackName}-repo
+  ServerCluster: 
+    Type: AWS::ECS::CLUSTER
+    Properties:
+      ClusterName: !Sub ${AWS::StackName}-cluster
+      CapacityProviders:
+        - FARGATE
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    DependsOn:
+      - HttpTargetGroup
+      - HTTPListener
+    Properties:
+      RequiresCompatibilities:
+        - FARGATE
+      Family: !Ref ${AWS::StackName}
+      ContainerDefinitions:
+        - name: !Ref ${AWS::StackName}
+          Image: !Join 
+            - ':'
+            - - !Join 
+                - /
+                - - !GetAtt ECRRepository.Arn
+                  - !Ref ECRRepository
+              - latest
+          Essential: true
+          PortMappings:
+            - HostPort: !Ref ContainerPort
+              protocol: tcp
+              ContainerPort: !Ref ContainerPort
+      NetworkMode: awsvpc
+      Memory: '512'
+      Cpu: '256'
+      ExecutionRoleArn: !Ref ECSTaskExecutionRole
   User:
     Type: AWS::IAM:User
     Properties:
@@ -87,6 +183,33 @@ Resources:
     Properties:
       UserName: !Ref User
       Status: 'Active'
+  ECSTaskExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-role
+      AssumeRolePolicyDocument:
+        Version: "2008-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-role-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - "ecr:GetAuthorizationToken"
+                  - "ecr:BatchCheckLayerAvailability"
+                  - "ecr:GetDownloadUrlForLayer"
+                  - "ecr:BatchGetImage"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: !GetAtt ECRRepository.Arn
   UserInlinePolicy:
     Type: AWS::IAM:Policy
     DependsOn:
@@ -122,81 +245,48 @@ Resources:
             Effect: 'Allow'
             Action:
               - iam:PassRole
-            # Resource: ""
+            Resource: !GetAtt ECSTaskExecutionRole.Arn
           - Sid: 'DeployService'
             Effect: 'Allow'
             Action:
               - 'ecs:UpdateService'
               - 'ecs:DescribeServices'
-            # Resource: ""
+            Resource: !Ref ECSService
       User:
         - !Ref User
-  ECRRepository:
-    Type: AWS::ECR::Repository
-    Properties:
-      RepositoryName: !Sub ${AWS::StackName}-repo
-  TaskDefinition:
-    Type: AWS::ECS::TaskDefinition
-    DependsOn:
-      - HttpTargetGroup
-      # - ALBListenerRule
-    Properties:
-      RequiresCompatibilities:
-        - FARGATE
-      Family: !Sub ${AWS::StackName}
-      ContainerDefinitions:
-        - name: !Sub ${AWS::StackName}
-          Image: !Join 
-            - ':'
-            - - !Join 
-                - /
-                - - !GetAtt ECRRepository.Arn
-                  - !Ref ECRRepository
-              - latest
-          Essential: true
-          PortMappings:
-            - HostPort: !Ref ContainerPort
-              protocol: tcp
-              ContainerPort: !Ref ContainerPort
-          LogConfiguration:
-            LogDriver: awslogs
-            Options:
-              awslogs-group: !Join 
-                - /
-                - ecs
-                  - !Sub ${AWS::StackName}
-              awslogs-region: us-east-2
-              awslogs-stream-prefix: ecs
-      NetworkMode: awsvpc
-      Memory: '512'
-      Cpu: '256'
-      # TaskRoleArn: !Ref ECSTaskRoleArn
-      # ExecutionRoleArn: !Ref ECSTaskExecutionRoleArn
-
-  HttpTargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      Name: !Sub ${AWS::StackName}-tg
-      HealthCheckIntervalSeconds: 30
-      HealthCheckPath: !Ref HealthCheckPath
-      HealthCheckProtocol: HTTP
-      HealthCheckTimeoutSeconds: 5
-      HealthyThresholdCount: 3
-      Port: 80
-      Protocol: HTTP
-      UnhealthyThresholdCount: 2
-      # VpcId: !Ref VpcId
-      TargetType: ip
-  # ALBListenerRule:
-  #   Type: AWS::ElasticLoadBalancingV2::Listener
   ECSService:
-    # Type: 'AWS::ECS::Service'
-    # DependsOn: TaskDefinition
-    # Properties:
-    #   ServiceName: !Ref ECSServiceName
+    Type: 'AWS::ECS::Service'
+    DependsOn: TaskDefinition
+    Properties:
+      ServiceName: !Sub ${AWS::StackName}
+      Cluster: !GetAtt ServerCluster.Arn
+      LaunchType: FARGATE
+      DesiredCount: !Ref DesiredCapacity
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+      HealthCheckGracePeriodSeconds: 5
+      TaskDefinition: !Ref TaskDefinition
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          SecurityGroups: 
+            - !GetAtt ServerSecurityGroup.GroupId
+          Subnets: 
+            - !Ref PublicSubnetA
+            - !Ref PublicSubnetB
+            - !Ref PublicSubnetC
+          AssignPublicIp: ENABLED
+      LoadBalancers:
+        - ContainerName: !Ref ${AWS::StackName}
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !Ref HttpTargetGroup
+          LoadBalancerName: !GetAtt ApplicationLoadBalancer.LoadBalancerName
   
 
 Outputs:
+  LoadBalancerDNS:
+    Description: Load Balancer DNS name to access the server 
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
   UserAccessKeyId:
     Description: User access key ID
     Value: !GetAtt MyAccessKey.Id
