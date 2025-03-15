@@ -33,33 +33,38 @@ jobs:
         uses: aws-actions/aws-cloudformation-github-deploy@v1
         with:
           name: ${{env.APP_NAME}}
-          template: "./infrastructure/cloudformation/staging-stack.yml"
-          parameter-overrides: "file:///${{ github.workspace }}/parameters.json"
+          template: './infrastructure/cloudformation/staging-stack.yml'
+          parameter-overrides: 'file:///${{ github.workspace }}/parameters.json'
           no-fail-on-empty-changeset: 1
       - name: Output
         run: |
           echo ${{steps.stack.outputs.instancepublicdnsname}}
           echo ${{steps.stack.outputs.instancepublicip}}
-    # build: 
-    #     runs-on: ubuntu-24.04
-    #     steps:
-    #       - name: Checkout
-    #         uses: actions/checkout@v4
-    #         with:
-    #           fetch-depth: 0
-    #       - name: Read node version 
-    #         id: nvmrc
-    #         uses: browniebroke/read-nvmrc-action@v1
-    #       - name: Setup Nodejs
-    #         uses: actions/setup-node@v4
-    #         with:
-    #           node-version: '${{ steps.nvmrc.outputs.node_version }}'
-    #       - name: Install project packages
-    #         run: yarn
-    #       - name: Build project
-    #         run: yarn build
-    #         env: 
-    #           NODE_OPTIONS: --openssl-legacy-provider
+  build:
+    needs: deploy_stack
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Output
+        run: |
+          echo '${{ toJSON(needs.deploy_stack) }}'
+
+      # - name: Checkout
+      #   uses: actions/checkout@v4
+      #   with:
+      #     fetch-depth: 0
+      # - name: Read node version
+      #   id: nvmrc
+      #   uses: browniebroke/read-nvmrc-action@v1
+      # - name: Setup Nodejs
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: '${{ steps.nvmrc.outputs.node_version }}'
+      # - name: Install project packages
+      #   run: yarn
+      # - name: Build project
+      #   run: yarn build
+      #   env:
+      #     NODE_OPTIONS: --openssl-legacy-provider
     #       - name: Deploy to EC2 instance
     #         uses: easingthemes/ssh-deploy@v5.1.0
     #         env:
