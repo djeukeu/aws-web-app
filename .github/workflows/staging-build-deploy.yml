@@ -16,7 +16,7 @@ jobs:
   deploy_stack:
     runs-on: ubuntu-24.04
     outputs:
-      publicdns: ${{steps.stack.outputs.instancepublicdnsname}}
+      publicdns: ${{steps.server.outputs.dns}}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,7 +30,6 @@ jobs:
           aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-          mask-aws-account-id: 'false'
       - name: Provision AWS Stack
         id: stack
         uses: aws-actions/aws-cloudformation-github-deploy@v1
@@ -39,6 +38,9 @@ jobs:
           template: './infrastructure/cloudformation/staging-stack.yml'
           parameter-overrides: 'file:///${{ github.workspace }}/parameters.json'
           no-fail-on-empty-changeset: 1
+      - name: W
+        id: server
+        run: echo "::set-output name=dns::${{steps.stack.outputs.instancepublicdnsname}}"
   build:
     needs: deploy_stack
     runs-on: ubuntu-24.04
