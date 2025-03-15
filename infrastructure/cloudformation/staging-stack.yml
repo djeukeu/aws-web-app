@@ -1,4 +1,3 @@
----
 Parameters:
   VpcCidrBlock:
     Type: String
@@ -88,6 +87,7 @@ Resources:
           CidrIp: 0.0.0.0/0
           FromPort: 22
           ToPort: 22
+
 Outputs:
   InstancePublicDnsName:
     Description: The public DNS Name of the Instance
