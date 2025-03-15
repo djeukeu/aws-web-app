@@ -6,17 +6,9 @@ on:
     branches:
       - develop
 
-env:
-  APP_NAME: ${{ secrets.APP_NAME }}
-  AWS_REGION: ${{ secrets.AWS_REGION }}
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
 jobs:
-  deploy_stack:
+  build_deploy:
     runs-on: ubuntu-24.04
-    outputs:
-      publicdns: ${{steps.server.outputs.dns}}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,72 +19,57 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
       - name: Provision AWS Stack
         id: stack
         uses: aws-actions/aws-cloudformation-github-deploy@v1
         with:
-          name: ${{env.APP_NAME}}
+          name: ${{secrets.APP_NAME}}
           template: './infrastructure/cloudformation/staging-stack.yml'
           parameter-overrides: 'file:///${{ github.workspace }}/parameters.json'
           no-fail-on-empty-changeset: 1
-      - name: W
-        id: server
-        run: echo "::set-output name=dns::${{steps.stack.outputs.instancepublicdnsname}}"
-  build:
-    needs: deploy_stack
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Output
-        run: |
-          echo '${{ toJSON(needs.deploy_stack.outputs) }}'
-
-      # - name: Checkout
-      #   uses: actions/checkout@v4
-      #   with:
-      #     fetch-depth: 0
-      # - name: Read node version
-      #   id: nvmrc
-      #   uses: browniebroke/read-nvmrc-action@v1
-      # - name: Setup Nodejs
-      #   uses: actions/setup-node@v4
-      #   with:
-      #     node-version: '${{ steps.nvmrc.outputs.node_version }}'
-      # - name: Install project packages
-      #   run: yarn
-      # - name: Build project
-      #   run: yarn build
-      #   env:
-      #     NODE_OPTIONS: --openssl-legacy-provider
-    #       - name: Deploy to EC2 instance
-    #         uses: easingthemes/ssh-deploy@v5.1.0
-    #         env:
-    #           SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
-    #           REMOTE_HOST: ${{ secrets.EC2_HOST }}
-    #           REMOTE_USER: ${{ secrets.EC2_USERNAME }}
-    #           SOURCE: "./"
-    #           TARGET: ${{ secrets.EC2_TARGET_DIR }}
-    #           EXCLUDE: "/node_modules/"
-    #       - name: Launch App in the EC2 instance
-    #         uses: appleboy/ssh-action@master
-    #         with:
-    #           host: ${{ secrets.EC2_HOST }}
-    #           username: ${{ secrets.EC2_USERNAME }}
-    #           key: ${{ secrets.EC2_SSH_KEY }}
-    #           script: |
-    #             sudo yum -y update
-    #             sudo yum install -y httpd
-    #             sudo systemctl start httpd
-    #             sudo systemctl enable httpd
-    #             cd /home/ec2-user/build
-    #             sudo mv * /var/www/html
-    #             sudo systemctl restart httpd
-    #       - name: Cache node modules
-    #         uses: actions/cache@v4
-    #         with:
-    #           path: node_modules
-    #           key: ${{ runner.os }}-node-${{ hashFiles('**/package.json') }}
-    #           restore-keys: |
-    #             ${{ runner.os }}-node-
+      - name: Read node version
+        id: nvmrc
+        uses: browniebroke/read-nvmrc-action@v1
+      - name: Setup Nodejs
+        uses: actions/setup-node@v4
+        with:
+          node-version: '${{ steps.nvmrc.outputs.node_version }}'
+      - name: Install project packages
+        run: yarn
+      - name: Build project
+        run: yarn build
+        env:
+          NODE_OPTIONS: --openssl-legacy-provider
+      - name: Deploy to EC2 instance
+        uses: easingthemes/ssh-deploy@v5.1.0
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+          REMOTE_HOST: ${{steps.stack.outputs.instancepublicdnsname}}
+          REMOTE_USER: ${{ secrets.EC2_USERNAME }}
+          SOURCE: "./"
+          TARGET: ${{ secrets.EC2_TARGET_DIR }}
+          EXCLUDE: "/node_modules/"
+      - name: Launch App in the EC2 instance
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{steps.stack.outputs.instancepublicdnsname}}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            sudo yum -y update
+            sudo yum install -y httpd
+            sudo systemctl start httpd
+            sudo systemctl enable httpd
+            cd /home/ec2-user/build
+            sudo mv * /var/www/html
+            sudo systemctl restart httpd
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
