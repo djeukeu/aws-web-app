@@ -34,7 +34,7 @@ jobs:
         with:
           name: ${{env.APP_NAME}}
           template: "./infrastructure/cloudformation/staging-stack.yml"
-          parameter-overrides: "parameters.json"
+          parameter-overrides: "file:///${{ github.workspace }}/parameters.json"
           no-fail-on-empty-changeset: 1
       - name: Output
         run: |
