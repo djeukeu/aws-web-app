@@ -46,7 +46,7 @@ jobs:
     steps:
       - name: Output
         run: |
-          echo '${{ toJSON(needs.deploy_stack) }}'
+          echo '${{ toJSON(needs.deploy_stack.outputs) }}'
 
       # - name: Checkout
       #   uses: actions/checkout@v4
