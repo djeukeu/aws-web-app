@@ -15,8 +15,8 @@ env:
 jobs:
   deploy_stack:
     runs-on: ubuntu-24.04
-    outputs:
-      publicdns: ${{steps.stack.outputs.instancepublicdnsname}}
+    # outputs:
+    #   publicdns: ${{steps.stack.outputs.instancepublicdnsname}}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,7 +44,7 @@ jobs:
     steps:
       - name: Output
         run: |
-          echo '${{ toJSON(needs.deploy_stack.outputs) }}'
+          echo '${{ toJSON(jobs) }}'
 
       # - name: Checkout
       #   uses: actions/checkout@v4
