@@ -1,5 +1,5 @@
-name: Build and Deploy Web app to EC2
-run-name: ${{ github.actor }} triggered the build and deploy to EC2
+name: Provision, Build and Deploy Web app
+run-name: ${{ github.actor }} triggered the provisioning, building and deployment of the Web App
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
       - develop
 
 jobs:
-  build_deploy:
+  stack_build_deploy:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
