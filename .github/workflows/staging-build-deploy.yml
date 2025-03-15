@@ -36,7 +36,6 @@ jobs:
           template: "./infrastructure/cloudformation/staging-stack.yml"
           parameter-overrides: "file:///${{ github.workspace }}/parameters.json"
           no-fail-on-empty-changeset: 1
-          role-arn: arn:aws:iam::611500158127:role/web
       - name: Output
         run: |
           echo ${{steps.stack.outputs.instancepublicdnsname}}
