@@ -30,7 +30,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
       - name: Provision AWS Stack
         id: stack
-        uses: aws-actions/aws-cloudformation-github-deploy@master
+        uses: aws-actions/aws-cloudformation-github-deploy@v1
         with:
           name: ${{env.APP_NAME}}
           template: "./infrastructure/cloudformation/staging-stack.yml"
