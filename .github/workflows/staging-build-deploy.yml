@@ -15,8 +15,8 @@ env:
 jobs:
   deploy_stack:
     runs-on: ubuntu-24.04
-    # outputs:
-    #   publicdns: ${{steps.stack.outputs.instancepublicdnsname}}
+    outputs:
+      publicdns: ${{steps.stack.outputs.instancepublicdnsname}}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,6 +30,7 @@ jobs:
           aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: 'false'
       - name: Provision AWS Stack
         id: stack
         uses: aws-actions/aws-cloudformation-github-deploy@v1
@@ -44,7 +45,7 @@ jobs:
     steps:
       - name: Output
         run: |
-          echo '${{ toJSON(github) }}'
+          echo '${{ toJSON(needs.deploy_stack.outputs) }}'
 
       # - name: Checkout
       #   uses: actions/checkout@v4
