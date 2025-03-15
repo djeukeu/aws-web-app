@@ -38,8 +38,7 @@ jobs:
           no-fail-on-empty-changeset: 1
       - name: Output
         run: |
-          echo ${{steps.stack.outputs.stack-id}}
-          echo ${{steps.stack.outputs.instance-public-dns-name}}
+          echo ${{steps.stack.outputs.instancepublicdnsname}}
           echo ${{steps.stack.outputs.instancepublicip}}
     # build: 
     #     runs-on: ubuntu-24.04
