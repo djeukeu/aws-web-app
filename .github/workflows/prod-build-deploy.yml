@@ -78,6 +78,7 @@ jobs:
           name: '${{secrets.APP_NAME}}-2'
           template: './infrastructure/cloudformation/prod-stack-2.yml'
           parameter-overrides: 'file:///${{ github.workspace }}/parameters-2.json'
+          capabilities: 'CAPABILITY_NAMED_IAM'
           no-fail-on-empty-changeset: 1
       - name: Cache node modules
         uses: actions/cache@v4
