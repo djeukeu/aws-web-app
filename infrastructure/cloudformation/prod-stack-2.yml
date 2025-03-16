@@ -148,7 +148,6 @@ Resources:
         - ContainerName: !Ref AppName
           ContainerPort: !Ref ContainerPort
           TargetGroupArn: !Ref HttpTargetGroup
-          LoadBalancerName: !GetAtt ApplicationLoadBalancer.LoadBalancerName
 
 
 Outputs:
