@@ -7,7 +7,7 @@ Parameters:
     Type: String
     Default: /
     Description: Health Check path for the server
-    
+
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -140,6 +140,9 @@ Resources:
         - FARGATE
 
 Outputs:
+  ECRRepositoryName:
+    Description: Name of the private ECR Repository
+    Value: !Ref ECRRepository
   LoadBalancerDNS:
     Description: Load Balancer DNS name to access the server 
     Value: !GetAtt ApplicationLoadBalancer.DNSName

@@ -25,3 +25,4 @@ yarn-error.log*
 .env.*
 
 staging-parameters.json
+prod-1-parameters.json

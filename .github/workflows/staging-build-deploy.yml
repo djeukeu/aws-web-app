@@ -15,7 +15,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Write stack parameter file
-        run: echo '${{ secrets.STACK_PARAMETER }}' > parameters.json
+        run: echo '${{ secrets.STAGING_STACK_PARAMETER }}' > parameters.json
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
