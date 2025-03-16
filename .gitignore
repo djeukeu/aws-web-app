@@ -26,3 +26,4 @@ yarn-error.log*
 
 staging-parameters.json
 prod-1-parameters.json
+prod-2-parameters.json

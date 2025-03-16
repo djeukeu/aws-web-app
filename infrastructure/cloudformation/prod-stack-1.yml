@@ -1,12 +1,7 @@
----
 Parameters:
   AppName:
     Type: String
     Description: The name associate with the project
-  HealthCheckPath:
-    Type: String
-    Default: /
-    Description: Health Check path for the server
 
 Resources:
   VPC:
@@ -72,62 +67,6 @@ Resources:
     Properties:
       SubnetId: !Ref PublicSubnetC
       RouteTableId: !Ref PublicRouteTable
-  ALBSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Application load balancer security group for HTTP access
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          CidrIp: 0.0.0.0/0
-          FromPort: 80
-          ToPort: 80
-  ServerSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Enable access to the server
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          CidrIp: 0.0.0.0/0
-          FromPort: 3000
-          ToPort: 3000
-  HttpTargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      Name: !Sub ${AppName}-tg
-      HealthCheckIntervalSeconds: 30
-      HealthCheckPath: !Ref HealthCheckPath
-      HealthCheckProtocol: HTTP
-      HealthCheckTimeoutSeconds: 5
-      HealthyThresholdCount: 3
-      Port: 80
-      Protocol: HTTP
-      UnhealthyThresholdCount: 2
-      VpcId: !Ref VPC
-      TargetType: ip
-  HTTPListener:
-    Type: "AWS::ElasticLoadBalancingV2::Listener"
-    Properties:
-      LoadBalancerArn: !Ref ApplicationLoadBalancer
-      Port: 80
-      Protocol: "HTTP"
-      DefaultActions:
-        - Type: forward
-          TargetGroupArn: !Ref HttpTargetGroup
-  ApplicationLoadBalancer:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      Name: !Sub ${AppName}-alb
-      Scheme: "internet-facing"
-      Type: "application"
-      Subnets: 
-        - !Ref PublicSubnetA
-        - !Ref PublicSubnetB
-        - !Ref PublicSubnetC
-      SecurityGroups: 
-        - !Ref ALBSecurityGroup
-      IpAddressType: "ipv4"
   ECRRepository:
     Type: AWS::ECR::Repository
     Properties:
@@ -140,9 +79,36 @@ Resources:
         - FARGATE
 
 Outputs:
+  VpcId:
+    Description: The unique identifier of the VPC
+    Value: !Ref VPC
+    Export: 
+      Name: VPC
+  PublicSubnetA:
+    Description: The unique identifier of the Public Subnet A
+    Value: !Ref PublicSubnetA
+    Export: 
+      Name: PublicSubnetA
+  PublicSubnetB:
+    Description: The unique identifier of the Public Subnet B
+    Value: !Ref PublicSubnetB
+    Export: 
+      Name: PublicSubnetB
+  PublicSubnetC:
+    Description: The unique identifier of the Public Subnet C
+    Value: !Ref PublicSubnetC
+    Export: 
+      Name: PublicSubnetC
+  ECSClusterResourceName:
+    Description: ECS Cluster ARN
+    Value: !GetAtt ServerCluster.Arn
+    Export: 
+      Name: Cluster
+  ECRRepositoryResourceName:
+    Description: ECR Repository ARN
+    Value: !GetAtt ECRRepository.Arn
+    Export: 
+      Name: ECRRepository
   ECRRepositoryName:
     Description: Name of the private ECR Repository
     Value: !Ref ECRRepository
-  LoadBalancerDNS:
-    Description: Load Balancer DNS name to access the server 
-    Value: !GetAtt ApplicationLoadBalancer.DNSName

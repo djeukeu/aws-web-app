@@ -1,12 +1,14 @@
----
 Parameters:
   AppName:
     Type: String
     Description: The name associate with the project
-  UserName:
+  HealthCheckPath:
     Type: String
-    Description: The name of the IAM user for the access key
-
+    Default: /
+    Description: Health Check path for the server
+  Image:
+    Type: String
+    Description: The image used to launch the app
   ContainerPort:
     Type: Number
     Default: '80'
@@ -17,6 +19,62 @@ Parameters:
     Description: Number of instances to launch in the ECS cluster.
 
 Resources:
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Application load balancer security group for HTTP access
+      VpcId: !ImportValue VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 80
+          ToPort: 80
+  ServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable access to the server
+      VpcId: !ImportValue VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 3000
+          ToPort: 3000
+  HttpTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${AppName}-tg
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: !Ref HealthCheckPath
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 3
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !ImportValue VPC
+      TargetType: ip
+  HTTPListener:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: "HTTP"
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref HttpTargetGroup
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${AppName}-alb
+      Scheme: "internet-facing"
+      Type: "application"
+      Subnets: 
+        - !ImportValue PublicSubnetA
+        - !ImportValue PublicSubnetB
+        - !ImportValue PublicSubnetC
+      SecurityGroups: 
+        - !Ref ALBSecurityGroup
+      IpAddressType: "ipv4"
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     DependsOn:
@@ -28,13 +86,7 @@ Resources:
       Family: !Ref AppName
       ContainerDefinitions:
         - Name: !Ref AppName
-          Image: !Join 
-            - ':'
-            - - !Join 
-                - /
-                - - !GetAtt ECRRepository.Arn
-                  - !Ref ECRRepository
-              - latest
+          Image: !Ref Image
           Essential: true
           PortMappings:
             - HostPort: !Ref ContainerPort
@@ -70,13 +122,12 @@ Resources:
                   - "ecr:BatchGetImage"
                   - "logs:CreateLogStream"
                   - "logs:PutLogEvents"
-                Resource: !GetAtt ECRRepository.Arn
+                Resource: !ImportValue ECRRepository
   ECSService:
     Type: 'AWS::ECS::Service'
-    DependsOn: TaskDefinition
     Properties:
       ServiceName: !Ref AppName
-      Cluster: !GetAtt ServerCluster.Arn
+      Cluster: !ImportValue Cluster
       LaunchType: FARGATE
       DesiredCount: !Ref DesiredCapacity
       DeploymentConfiguration:
@@ -89,24 +140,18 @@ Resources:
           SecurityGroups: 
             - !GetAtt ServerSecurityGroup.GroupId
           Subnets: 
-            - !Ref PublicSubnetA
-            - !Ref PublicSubnetB
-            - !Ref PublicSubnetC
+            - !ImportValue PublicSubnetA
+            - !ImportValue PublicSubnetB
+            - !ImportValue PublicSubnetC
           AssignPublicIp: ENABLED
       LoadBalancers:
         - ContainerName: !Ref AppName
           ContainerPort: !Ref ContainerPort
           TargetGroupArn: !Ref HttpTargetGroup
           LoadBalancerName: !GetAtt ApplicationLoadBalancer.LoadBalancerName
-  
+
 
 Outputs:
   LoadBalancerDNS:
     Description: Load Balancer DNS name to access the server 
     Value: !GetAtt ApplicationLoadBalancer.DNSName
-  UserAccessKeyId:
-    Description: User access key ID
-    Value: !Ref MyAccessKey
-  UserAccessKeySecret:
-    Description: User secret access key
-    Value: !GetAtt MyAccessKey.SecretAccessKey

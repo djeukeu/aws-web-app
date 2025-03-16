@@ -14,8 +14,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Write stack parameter file
-        run: echo '${{ secrets.PROD_STACK_PARAMETER }}' > parameters.json
+      - name: Write stack 1 parameters file
+        run: echo '${{ secrets.PROD_STACK_PARAMETER_ONE }}' > parameters-1.json
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -28,7 +28,7 @@ jobs:
         with:
           name: '${{secrets.APP_NAME}}-1'
           template: './infrastructure/cloudformation/prod-stack-1.yml'
-          parameter-overrides: 'file:///${{ github.workspace }}/parameters.json'
+          parameter-overrides: 'file:///${{ github.workspace }}/parameters-1.json'
           no-fail-on-empty-changeset: 1
       - name: Read node version
         id: nvmrc
@@ -64,6 +64,18 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+      - name: Write stack 2 parameters file
+        run: echo '${{ secrets.PROD_STACK_PARAMETER_TWO }}' > parameters-2.json
+      - name: Set the image name in parameters file
+        run: |
+          sed 's/ImageValue/${{ steps.ecr-image.outputs.image }}/' parameters-2.json > parameters.json
+      - name: Provision AWS Stack-2 
+        uses: aws-actions/aws-cloudformation-github-deploy@v1
+        with:
+          name: '${{secrets.APP_NAME}}-2'
+          template: './infrastructure/cloudformation/prod-stack-2.yml'
+          parameter-overrides: 'file:///${{ github.workspace }}/parameters.json'
+          no-fail-on-empty-changeset: 1
       - name: Cache node modules
         uses: actions/cache@v4
         with:
