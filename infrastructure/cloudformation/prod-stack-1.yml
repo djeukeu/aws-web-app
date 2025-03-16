@@ -1,0 +1,145 @@
+---
+Parameters:
+  AppName:
+    Type: String
+    Description: The name associate with the project
+  HealthCheckPath:
+    Type: String
+    Default: /
+    Description: Health Check path for the server
+    
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Sub ${AWS::Region}a
+      CidrBlock: 10.0.0.0/24
+      MapPublicIpOnLaunch: true
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Sub ${AWS::Region}b
+      CidrBlock: 10.0.16.0/24
+      MapPublicIpOnLaunch: true
+  PublicSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Sub ${AWS::Region}c
+      CidrBlock: 10.0.32.0/24
+      MapPublicIpOnLaunch: true
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: VPC
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+  RouteTrafficToIGW:
+    Type: AWS::EC2::Route
+    DependsOn:
+      - AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      GatewayId: !Ref InternetGateway
+      DestinationCidrBlock: 0.0.0.0/0
+  PublicSubnetRouteTableAssociationA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref PublicRouteTable
+  PublicSubnetRouteTableAssociationB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetB
+      RouteTableId: !Ref PublicRouteTable
+  PublicSubnetRouteTableAssociationC:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetC
+      RouteTableId: !Ref PublicRouteTable
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Application load balancer security group for HTTP access
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 80
+          ToPort: 80
+  ServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable access to the server
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 3000
+          ToPort: 3000
+  HttpTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${AppName}-tg
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: !Ref HealthCheckPath
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 3
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref VPC
+      TargetType: ip
+  HTTPListener:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: "HTTP"
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref HttpTargetGroup
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${AppName}-alb
+      Scheme: "internet-facing"
+      Type: "application"
+      Subnets: 
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetB
+        - !Ref PublicSubnetC
+      SecurityGroups: 
+        - !Ref ALBSecurityGroup
+      IpAddressType: "ipv4"
+  ECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub ${AppName}-repo
+  ServerCluster: 
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub ${AppName}-cluster
+      CapacityProviders:
+        - FARGATE
+
+Outputs:
+  LoadBalancerDNS:
+    Description: Load Balancer DNS name to access the server 
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
