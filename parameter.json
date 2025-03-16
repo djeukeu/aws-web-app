@@ -1,0 +1,7 @@
+[
+	{ "ParameterKey": "AppName", "ParameterValue": "patricias" },
+	{ "ParameterKey": "HealthCheckPath", "ParameterValue": "/" },
+	{ "ParameterKey": "Image", "ParameterValue": "ImageValue" },
+	{ "ParameterKey": "ContainerPort", "ParameterValue": "3000" },
+	{ "ParameterKey": "DesiredCapacity", "ParameterValue": "1" }
+]
