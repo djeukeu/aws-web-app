@@ -65,10 +65,13 @@ jobs:
       #     docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
       #     echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
       - name: Write stack 2 parameters file
+        id: ecr-image
+        run: echo "::set-output name=image::custe"
+      - name: Write stack 2 parameters file
         run: echo '${{ secrets.PROD_STACK_PARAMETER_TWO }}' > parameters-2.json
       - name: Set the image name in parameters file
         run: |
-          sed 's/ImageValue/cus/' parameters-2.json > parameters.json
+          sed 's/ImageValue/${{ steps.ecr-image.outputs.image }}/' parameters-2.json > parameters.json
       # - name: Provision AWS Stack-2 
       #   uses: aws-actions/aws-cloudformation-github-deploy@v1
       #   with:
