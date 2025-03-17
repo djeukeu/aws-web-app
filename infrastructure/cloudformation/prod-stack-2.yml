@@ -122,7 +122,7 @@ Resources:
                   - "ecr:BatchGetImage"
                   - "logs:CreateLogStream"
                   - "logs:PutLogEvents"
-                Resource: !ImportValue ECRRepository
+                Resource: "*"
   ECSService:
     Type: 'AWS::ECS::Service'
     Properties:
