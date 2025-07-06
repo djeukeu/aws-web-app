@@ -27,16 +27,16 @@ Resources:
       SecurityGroupIngress:
         - IpProtocol: tcp
           CidrIp: 0.0.0.0/0
-          FromPort: 80
-          ToPort: 80
-  ServerSecurityGroupInboundRule:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      Description: Enable inbound access to the ALB
-      SourceSecurityGroupId: !GetAtt ALBSecurityGroup.GroupId
-      IpProtocol: tcp
-      FromPort: 3000
-      ToPort: 3000
+          FromPort: 3000
+          ToPort: 3000
+  # ServerSecurityGroupInboundRule:
+  #   Type: AWS::EC2::SecurityGroupIngress
+  #   Properties:
+  #     Description: Enable inbound access to the ALB
+  #     SourceSecurityGroupId: !GetAtt ALBSecurityGroup.GroupId
+  #     IpProtocol: tcp
+  #     FromPort: 3000
+  #     ToPort: 3000
   HttpTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -46,17 +46,17 @@ Resources:
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 3
-      Port: 80
+      Port: 3000
       Protocol: HTTP
       UnhealthyThresholdCount: 2
       VpcId: !ImportValue VPC
-      TargetType: ip
+      TargetType: instance
   HTTPListener:
-    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       LoadBalancerArn: !Ref ApplicationLoadBalancer
-      Port: 80
-      Protocol: "HTTP"
+      Port: 3000
+      Protocol: HTTP
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref HttpTargetGroup
@@ -136,7 +136,7 @@ Resources:
       NetworkConfiguration:
         AwsvpcConfiguration:
           SecurityGroups: 
-            - !GetAtt ServerSecurityGroupInboundRule.GroupId
+            - !GetAtt ALBSecurityGroup.GroupId
           Subnets: 
             - !ImportValue PublicSubnetA
             - !ImportValue PublicSubnetB
