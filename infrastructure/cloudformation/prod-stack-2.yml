@@ -32,7 +32,7 @@ Resources:
   ServerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable access to the server
+      GroupDescription: Server security group for Server
       VpcId: !ImportValue VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
