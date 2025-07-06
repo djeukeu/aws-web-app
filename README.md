@@ -23,4 +23,4 @@ Next Github Actions is handles for build, tagging and deployment of the applicat
 
 ![Staging Architecture Diagram](https://github.com/djeukeu/aws-web-app/blob/master/web-ci-cd-1.png)
 
-![Staging Architecture Diagram](https://github.com/djeukeu/aws-web-app/blob/master/web-ci-cd-2.png)
+![Production Architecture Diagram](https://github.com/djeukeu/aws-web-app/blob/master/web-ci-cd-2.png)
