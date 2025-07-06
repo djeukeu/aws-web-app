@@ -37,14 +37,6 @@ Resources:
       IpProtocol: tcp
       FromPort: 3000
       ToPort: 3000
-  ServerSecurityGroupOutboundRule:
-    Type: AWS::EC2::SecurityGroupEgress
-    Properties:
-      Description: Enable outbound access to the ALB
-      DestinationSecurityGroupId: !GetAtt ALBSecurityGroup.GroupId
-      IpProtocol: tcp
-      FromPort: 3000
-      ToPort: 3000
   HttpTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -145,7 +137,6 @@ Resources:
         AwsvpcConfiguration:
           SecurityGroups: 
             - !GetAtt ServerSecurityGroupInboundRule.GroupId
-            - !GetAtt ServerSecurityGroupOutboundRule.GroupId
           Subnets: 
             - !ImportValue PublicSubnetA
             - !ImportValue PublicSubnetB
