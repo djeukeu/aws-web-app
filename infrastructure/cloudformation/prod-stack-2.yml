@@ -27,16 +27,18 @@ Resources:
       SecurityGroupIngress:
         - IpProtocol: tcp
           CidrIp: 0.0.0.0/0
-          FromPort: 3000
-          ToPort: 3000
-  # ServerSecurityGroupInboundRule:
-  #   Type: AWS::EC2::SecurityGroupIngress
-  #   Properties:
-  #     Description: Enable inbound access to the ALB
-  #     SourceSecurityGroupId: !GetAtt ALBSecurityGroup.GroupId
-  #     IpProtocol: tcp
-  #     FromPort: 3000
-  #     ToPort: 3000
+          FromPort: 80
+          ToPort: 80
+  ServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable access to the server
+      VpcId: !ImportValue VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref ContainerPort
+          ToPort: !Ref ContainerPort
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
   HttpTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -46,16 +48,16 @@ Resources:
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 3
-      Port: 3000
+      Port: 80
       Protocol: HTTP
       UnhealthyThresholdCount: 2
       VpcId: !ImportValue VPC
-      TargetType: instance
+      TargetType: ip
   HTTPListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       LoadBalancerArn: !Ref ApplicationLoadBalancer
-      Port: 3000
+      Port: 80
       Protocol: HTTP
       DefaultActions:
         - Type: forward
@@ -64,15 +66,15 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Name: !Sub ${AppName}-alb
-      Scheme: "internet-facing"
-      Type: "application"
+      Scheme: internet-facing
+      Type: application
       Subnets: 
         - !ImportValue PublicSubnetA
         - !ImportValue PublicSubnetB
         - !ImportValue PublicSubnetC
       SecurityGroups: 
         - !Ref ALBSecurityGroup
-      IpAddressType: "ipv4"
+      IpAddressType: ipv4
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     DependsOn:
@@ -136,7 +138,7 @@ Resources:
       NetworkConfiguration:
         AwsvpcConfiguration:
           SecurityGroups: 
-            - !GetAtt ALBSecurityGroup.GroupId
+            - !GetAtt ServerSecurityGroup.GroupId
           Subnets: 
             - !ImportValue PublicSubnetA
             - !ImportValue PublicSubnetB
