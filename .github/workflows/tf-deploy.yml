@@ -1,12 +1,12 @@
-name: Provision, Build and Deploy Web app to production
-run-name: ${{ github.actor }} triggered the production deployment
+name: Provision Infrastructure
+run-name: ${{ github.actor }} triggered the insfrastructure provisioning
 
 on:
   push:
     branches:
       - update
-    paths:
-      - 'terraform/**'
+    # paths:
+    #   - 'terraform/**'
 
 
 jobs:
@@ -30,7 +30,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE }}
+          role-to-assume: arn:aws:iam::611500158127:role/TerraformGithubActions
           aws-region: ${{ secrets.AWS_REGION }}
       - name: Terraform Init
         run: terraform init
