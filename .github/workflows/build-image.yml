@@ -4,7 +4,7 @@ run-name: ${{ github.actor }} triggered the build image deployment
 on:
   push:
     branches:
-      - update
+      - master
 
 permissions:
   id-token: write
