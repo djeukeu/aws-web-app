@@ -1,0 +1,46 @@
+name: Provision Infrastructure
+run-name: ${{ github.actor }} triggered the insfrastructure provisioning
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'terraform/**'
+    
+permissions:
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-26.04
+    defaults:
+      run:
+        working-directory: ./terraform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.16.1
+      - name: Write terraform variable files
+        run: |
+          echo '${{ secrets.TF_VARS }}' > terraform.tfvars
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Terraform Init
+        run: terraform init
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+      - name: Write terraform ouput
+        run: terraform output -json > output.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tf-output
+          path: terraform/output.json

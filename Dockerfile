@@ -5,5 +5,8 @@ RUN yarn
 COPY . .
 ENV NODE_OPTIONS=--openssl-legacy-provider
 RUN yarn build
-EXPOSE 3000
-CMD ["npx", "serve", "-s", "build"] 
+
+FROM nginx:stable-alpine
+COPY --from=0 /usr/app/build /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
