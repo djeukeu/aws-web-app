@@ -7,7 +7,9 @@ on:
       - update
     # paths:
     #   - 'terraform/**'
-
+    
+permissions:
+  id-token: write
 
 jobs:
   deploy:
@@ -30,7 +32,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: arn:aws:iam::611500158127:role/TerraformGithubActions
+          role-to-assume: ${{ secrets.AWS_ROLE }}
           aws-region: ${{ secrets.AWS_REGION }}
       - name: Terraform Init
         run: terraform init
