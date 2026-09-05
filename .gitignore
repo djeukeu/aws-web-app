@@ -27,3 +27,35 @@ yarn-error.log*
 staging-parameters.json
 prod-1-parameters.json
 prod-2-parameters.json
+
+### Terraform ###
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Logs
+logs
+*.log
+*.csv
+*.dat
+*.out
+*.pid
+*.gz
+*.swp
+
+# .tfvars sensitive data
+*.tfvars
+*.tfvars.json
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
+
+# dotenv environment variable files
+.env
+.env.**.dev
+
+launch-script.sh
