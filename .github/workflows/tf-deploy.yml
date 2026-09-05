@@ -4,9 +4,9 @@ run-name: ${{ github.actor }} triggered the insfrastructure provisioning
 on:
   push:
     branches:
-      - update
-    # paths:
-    #   - 'terraform/**'
+      - master
+    paths:
+      - 'terraform/**'
     
 permissions:
   id-token: write
@@ -38,3 +38,9 @@ jobs:
         run: terraform init
       - name: Terraform Apply
         run: terraform apply -auto-approve
+      - name: Write terraform ouput
+        run: terraform output -json > output.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tf-output
+          path: terraform/output.json

@@ -1,0 +1,59 @@
+name: Build and Deploy Web app Image
+run-name: ${{ github.actor }} triggered the build image deployment
+
+on:
+  push:
+    branches:
+      - update
+
+permissions:
+  id-token: write
+
+jobs:
+  stack_build_deploy:
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Setup Gitversion
+        uses: gittools/actions/gitversion/setup@v4.5.0
+        with:
+          versionSpec: '6.3.0'
+      - name: Execute Gitversion
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v4.5.0
+        with:
+          configFilePath: GitVersion.yml
+      - name: Setup Nodejs
+        uses: actions/setup-node@v6
+        with:
+            node-version-file: '.nvmrc'
+            cache: 'yarn' 
+      - name: Install project dependencies
+        run: yarn
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - id: ecr-publish
+        uses: bitovi/github-actions-ecr-publish@v0.1.0
+        with:
+         aws_default_region: ${{ secrets.AWS_REGION }}
+         aws_ecr_repo_name: ${{ secrets.ECR_REPOSITORY }}
+         image_tag: ${{ steps.gitversion.outputs.major }}.${{ steps.gitversion.outputs.minor }}.${{ steps.gitversion.outputs.commitsSinceVersionSource }}
+    #   - name: Login to AWS ECR
+    #     uses: aws-actions/amazon-ecr-login@v2
+    #     id: login-ecr
+    #   - name: Build, tag, and push image to Amazon ECR
+    #     id: ecr-image
+    #     env:
+    #       ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+    #       ECR_REPOSITORY: ${{steps.stack.outputs.ecrrepositoryname}}
+    #       IMAGE_TAG: ${{ steps.gitversion.outputs.major }}.${{ steps.gitversion.outputs.minor }}.${{ steps.gitversion.outputs.commitsSinceVersionSource }}
+    #     run: |
+    #       docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+    #       docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+    #       echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
