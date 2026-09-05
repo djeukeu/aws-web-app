@@ -25,11 +25,9 @@ jobs:
         uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version_file: .tflint-version
-      - name: Cache tflint modules
-        uses: actions/cache@v6
-        with:
-          path: ~/.tflint.d/plugins
-          key: ${{ runner.os }}-tflint-${{ hashFiles('.tflint.hcl') }}
-      - name: TF Lint
+          cache: true
+      - name: TFLint Init
+        run: tflint --init
+      - name: TFLint
         run: |
           tflint
