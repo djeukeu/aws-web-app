@@ -1,5 +1,5 @@
 name: Provision Infrastructure
-run-name: ${{ github.actor }} triggered the insfrastructure provisioning
+run-name: ${{ github.actor }} triggered the infrastructure provisioning
 
 on:
   push:
