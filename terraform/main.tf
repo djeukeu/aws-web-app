@@ -61,3 +61,55 @@ resource "aws_ecs_task_definition" "ecs_service_task_def" {
 
   tags = local.common_tags
 }
+
+resource "aws_ecs_service" "ecs_service" {
+  name                               = "${var.app_name}-service"
+  cluster                            = aws_ecs_cluster.ecs_cluster.arn
+  task_definition                    = aws_ecs_task_definition.ecs_service_task_def.arn
+  desired_count                      = 2
+  availability_zone_rebalancing      = "ENABLED"
+  deployment_maximum_percent         = 200
+  deployment_minimum_healthy_percent = 100
+  force_delete                       = true
+  launch_type                        = "FARGATE"
+
+  network_configuration {
+    subnets          = values(aws_subnet.public_subnet)[*].id
+    security_groups  = [aws_security_group.ecs_service_sg.id]
+    assign_public_ip = true
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.ecs_alb_tg.arn
+    container_name   = var.app_name
+    container_port   = 80
+  }
+
+  # alarms {
+  #   enable   = true
+  #   rollback = true
+  #   alarm_names = [
+  #     aws_cloudwatch_metric_alarm.example.alarm_name
+  #   ]
+  # }
+
+  sigint_rollback       = true
+  wait_for_steady_state = true
+
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
+  lifecycle {
+    ignore_changes = [desired_count]
+  }
+
+  depends_on = [aws_lb_listener.alb_listener]
+
+  tags = local.common_tags
+}
+
+# resource "aws_cloudwatch_log_group" "example" {
+#   name = "/ecs/example/service-connect"
+# }
