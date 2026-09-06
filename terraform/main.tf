@@ -14,6 +14,11 @@ resource "aws_ecr_repository" "ecr_repo" {
 resource "aws_ecs_cluster" "ecs_cluster" {
   name = "${var.app_name}-cluster"
 
+  setting {
+    name  = "containerInsights"
+    value = "enhanced"
+  }
+
   tags = local.common_tags
 }
 
@@ -51,6 +56,15 @@ resource "aws_ecs_task_definition" "ecs_service_task_def" {
           hostPort      = 80
         }
       ]
+      # logConfiguration = {
+      #   logDriver = "awslogs"
+      #   options = {
+      #     "awslogs-group"         = aws_cloudwatch_log_group.app.name
+      #     "awslogs-region"        = "eu-west-1"
+      #     "awslogs-stream-prefix" = "ecs"
+      # "awslogs-create-group"  = "true"?
+      #   }
+      # }
     },
   ])
 

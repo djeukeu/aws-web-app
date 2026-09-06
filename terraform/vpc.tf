@@ -77,28 +77,36 @@ resource "aws_lb_target_group" "ecs_alb_tg" {
 
 resource "aws_security_group" "ecs_service_sg" {
   name        = "${var.app_name}-ecs-sg"
-  description = "Allow inbound traffic for alb and all outbound traffic"
+  description = "Allow inbound traffic from alb and all outbound traffic"
   vpc_id      = aws_vpc.vpc.id
-
-
-  ingress {
-    from_port       = 80
-    to_port         = 80
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb-sg.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 
   tags = local.common_tags
 }
 
-resource "aws_security_group" "alb-sg" {
+resource "aws_vpc_security_group_ingress_rule" "ecs_ingress_sg" {
+  security_group_id = aws_security_group.ecs_service_sg.id
+
+  referenced_security_group_id = aws_security_group.alb_sg.id
+  from_port                    = 80
+  ip_protocol                  = "tcp"
+  to_port                      = 80
+
+  tags = local.common_tags
+}
+
+resource "aws_vpc_security_group_egress_rule" "ecs_egress_sg" {
+  security_group_id = aws_security_group.ecs_service_sg.id
+
+  cidr_ipv4   = "0.0.0.0/0"
+  from_port   = 0
+  ip_protocol = "-1"
+  to_port     = 0
+
+  tags = local.common_tags
+
+}
+
+resource "aws_security_group" "alb_sg" {
   name        = "${var.app_name}-alb-sg"
   description = "Allow inbound HTTP traffic and all outbound traffic"
   vpc_id      = aws_vpc.vpc.id
@@ -121,15 +129,50 @@ resource "aws_security_group" "alb-sg" {
 
 }
 
+resource "aws_vpc_security_group_ingress_rule" "alb_ingress_sg" {
+  security_group_id = aws_security_group.alb_sg.id
 
-resource "aws_lb" "ecs-alb" {
+  cidr_ipv4   = "0.0.0.0/0"
+  from_port   = 80
+  ip_protocol = "tcp"
+  to_port     = 80
+
+  tags = local.common_tags
+}
+
+resource "aws_vpc_security_group_egress_rule" "alb_egress_sg" {
+  security_group_id = aws_security_group.alb_sg.id
+
+  cidr_ipv4   = "0.0.0.0/0"
+  from_port   = 0
+  ip_protocol = "-1"
+  to_port     = 0
+
+  tags = local.common_tags
+
+}
+
+
+resource "aws_lb" "ecs_alb" {
   name               = "${var.app_name}-alb"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb-sg.id]
+  security_groups    = [aws_security_group.alb_sg.id]
   subnets            = values(aws_subnet.public_subnet)[*].id
 
   # access_logs {
+  #   bucket  = aws_s3_bucket.lb_logs.id
+  #   prefix  = "test-lb"
+  #   enabled = true
+  # }
+
+  # connection_logs {
+  #   bucket  = aws_s3_bucket.lb_logs.id
+  #   prefix  = "test-lb"
+  #   enabled = true
+  # }
+
+  # health_check_logs {
   #   bucket  = aws_s3_bucket.lb_logs.id
   #   prefix  = "test-lb"
   #   enabled = true
@@ -139,7 +182,7 @@ resource "aws_lb" "ecs-alb" {
 }
 
 resource "aws_lb_listener" "alb_listener" {
-  load_balancer_arn = aws_lb.ecs-alb.arn
+  load_balancer_arn = aws_lb.ecs_alb.arn
   port              = 80
   protocol          = "HTTP"
 
@@ -147,5 +190,6 @@ resource "aws_lb_listener" "alb_listener" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.ecs_alb_tg.arn
   }
+
   tags = local.common_tags
 }
