@@ -14,3 +14,7 @@ variable "environment" {
     error_message = "Wrong environment value!"
   }
 }
+
+variable "container_image" {
+  type = string
+}
