@@ -20,7 +20,7 @@ variable "container_image" {
 }
 
 variable "desired_count" {
-  type = number
-  default = 2
+  type     = number
+  default  = 2
   nullable = true
 }
