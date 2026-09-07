@@ -1,3 +1,5 @@
+data "aws_caller_identity" "current" {}
+
 resource "aws_ecr_repository" "ecr_repo" {
   name                 = "${var.app_name}-repo"
   image_tag_mutability = "MUTABLE"
@@ -23,12 +25,11 @@ resource "aws_ecs_cluster" "ecs_cluster" {
 }
 
 resource "aws_ecs_cluster_capacity_providers" "ecs_capacity_providers" {
-  cluster_name = aws_ecs_cluster.ecs_cluster.name
-
-  capacity_providers = ["FARGATE"]
+  cluster_name       = aws_ecs_cluster.ecs_cluster.name
+  capacity_providers = ["FARGATE", "FARGATE_SPOT"]
 
   default_capacity_provider_strategy {
-    base              = 1
+    base              = var.desired_count
     weight            = 100
     capacity_provider = "FARGATE"
   }
@@ -56,15 +57,14 @@ resource "aws_ecs_task_definition" "ecs_service_task_def" {
           hostPort      = 80
         }
       ]
-      # logConfiguration = {
-      #   logDriver = "awslogs"
-      #   options = {
-      #     "awslogs-group"         = aws_cloudwatch_log_group.app.name
-      #     "awslogs-region"        = "eu-west-1"
-      #     "awslogs-stream-prefix" = "ecs"
-      # "awslogs-create-group"  = "true"?
-      #   }
-      # }
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.ecs_log_group.name
+          "awslogs-region"        = var.aws_region
+          "awslogs-stream-prefix" = "ecs"
+        }
+      }
     },
   ])
 
@@ -80,7 +80,7 @@ resource "aws_ecs_service" "ecs_service" {
   name                               = "${var.app_name}-service"
   cluster                            = aws_ecs_cluster.ecs_cluster.arn
   task_definition                    = aws_ecs_task_definition.ecs_service_task_def.arn
-  desired_count                      = 2
+  desired_count                      = var.desired_count
   availability_zone_rebalancing      = "ENABLED"
   deployment_maximum_percent         = 200
   deployment_minimum_healthy_percent = 100
@@ -124,6 +124,12 @@ resource "aws_ecs_service" "ecs_service" {
   tags = local.common_tags
 }
 
-# resource "aws_cloudwatch_log_group" "example" {
-#   name = "/ecs/example/service-connect"
+# -----------------
+
+# resource "aws_appautoscaling_target" "ecs_service" {
+#   max_capacity       = 5
+#   min_capacity       = var.desired_count
+#   resource_id        = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.ecs_service.name}"
+#   scalable_dimension = "ecs:service:DesiredCount"
+#   service_namespace  = "ecs"
 # }

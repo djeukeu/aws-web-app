@@ -18,3 +18,9 @@ variable "environment" {
 variable "container_image" {
   type = string
 }
+
+variable "desired_count" {
+  type = number
+  default = 2
+  nullable = true
+}
