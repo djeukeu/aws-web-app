@@ -99,14 +99,6 @@ resource "aws_ecs_service" "ecs_service" {
     container_port   = 80
   }
 
-  # alarms {
-  #   enable   = true
-  #   rollback = true
-  #   alarm_names = [
-  #     aws_cloudwatch_metric_alarm.example.alarm_name
-  #   ]
-  # }
-
   sigint_rollback       = true
   wait_for_steady_state = true
 
@@ -123,13 +115,3 @@ resource "aws_ecs_service" "ecs_service" {
 
   tags = local.common_tags
 }
-
-# -----------------
-
-# resource "aws_appautoscaling_target" "ecs_service" {
-#   max_capacity       = 5
-#   min_capacity       = var.desired_count
-#   resource_id        = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.ecs_service.name}"
-#   scalable_dimension = "ecs:service:DesiredCount"
-#   service_namespace  = "ecs"
-# }
