@@ -11,10 +11,10 @@ permissions:
   contents: read
 
 env:
-  TF_VAR_app_name: ${{ secrets.TF_VAR_APP_NAME }}
-  TF_VAR_aws_region: ${{ secrets.TF_VAR_AWS_REGION }}
-  TF_VAR_environment: ${{ secrets.TF_VAR_ENVIRONMENT }}
-  TF_VAR_desired_count: ${{ secrets.TF_VAR_DESIRED_COUNT }}
+  TF_VAR_app_name: ${{ vars.TF_VAR_APP_NAME }}
+  TF_VAR_aws_region: ${{ vars.TF_VAR_AWS_REGION }}
+  TF_VAR_environment: ${{ vars.TF_VAR_ENVIRONMENT }}
+  TF_VAR_desired_count: ${{ vars.TF_VAR_DESIRED_COUNT }}
   TF_VERSION: 1.16.1
 
 jobs:
