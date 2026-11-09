@@ -29,16 +29,11 @@ data "aws_iam_policy_document" "s3_policy_document" {
       "${aws_s3_bucket.s3.arn}/*"
     ]
 
-    # condition {
-    #   test     = "StringEquals"
-    #   variable = "aws:SourceAccount"
-    #   values   = [data.aws_caller_identity.current.account_id]
-    # }
-    # condition {
-    #   test     = "ArnLike"
-    #   variable = "aws:SourceArn"
-    #   values   = ["arn:aws:elasticloadbalancing:${var.aws_region}:${data.aws_caller_identity.current.account_id}:loadbalancer/*"]
-    # }
+    condition {
+      test     = "ArnLike"
+      variable = "aws:SourceArn"
+      values   = ["arn:aws:elasticloadbalancing:${var.aws_region}:${data.aws_caller_identity.current.account_id}:loadbalancer/*"]
+    }
 
     principals {
       type        = "Service"
