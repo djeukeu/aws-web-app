@@ -52,7 +52,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE }}
           aws-region: ${{ secrets.AWS_REGION }}
       - name: Login to AWS ECR
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v2
         id: login-ecr
       - name: Build, tag, and push image to Amazon ECR
         id: build
