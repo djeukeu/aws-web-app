@@ -1,4 +1,4 @@
-# data "aws_caller_identity" "current" {}
+data "aws_caller_identity" "current" {}
 
 resource "aws_ecr_repository" "ecr_repo" {
   name                 = "${var.app_name}-repo"
@@ -17,32 +17,7 @@ resource "aws_ecs_cluster" "ecs_cluster" {
     name  = "containerInsights"
     value = "enhanced"
   }
-
-  # configuration {
-  #   execute_command_configuration {
-  #     kms_key_id = aws_kms_key.example.arn
-  #     logging    = "OVERRIDE"
-
-  #     log_configuration {
-  #       cloud_watch_encryption_enabled = true
-  #       cloud_watch_log_group_name     = aws_cloudwatch_log_group.example.name
-  #     }
-  #   }
-  # }
-
 }
-
-# resource "aws_ecs_cluster_capacity_providers" "ecs_capacity_providers" {
-#   cluster_name       = aws_ecs_cluster.ecs_cluster.name
-#   capacity_providers = ["FARGATE", "FARGATE_SPOT"]
-
-#   default_capacity_provider_strategy {
-#     base              = var.desired_count
-#     weight            = 100
-#     capacity_provider = "FARGATE"
-#   }
-
-# }
 
 resource "aws_ecs_task_definition" "ecs_service_task_def" {
   family                   = "${var.app_name}-task-def"

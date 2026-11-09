@@ -110,23 +110,23 @@ resource "aws_lb" "ecs_alb" {
   security_groups    = [aws_security_group.alb_sg.id]
   subnets            = values(aws_subnet.public_subnet)[*].id
 
-  #   access_logs {
-  #     bucket  = aws_s3_bucket.s3.id
-  #     prefix  = "alb-access-logs"
-  #     enabled = true
-  #   }
+    access_logs {
+      bucket  = aws_s3_bucket.s3.id
+      prefix  = "alb-access-logs"
+      enabled = true
+    }
 
-  #   connection_logs {
-  #     bucket  = aws_s3_bucket.s3.id
-  #     prefix  = "alb-connection-logs"
-  #     enabled = true
-  #   }
+    connection_logs {
+      bucket  = aws_s3_bucket.s3.id
+      prefix  = "alb-connection-logs"
+      enabled = true
+    }
 
-  #   health_check_logs {
-  #     bucket  = aws_s3_bucket.s3.id
-  #     prefix  = "alb-healthcheck-logs"
-  #     enabled = true
-  #   }
+    health_check_logs {
+      bucket  = aws_s3_bucket.s3.id
+      prefix  = "alb-healthcheck-logs"
+      enabled = true
+    }
 
   # depends_on = [aws_s3_bucket_policy.s3_policy]
 }
