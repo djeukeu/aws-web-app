@@ -58,7 +58,7 @@ jobs:
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "image_uri=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" > image_uri.txt
+          echo $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG > image_uri.txt
       - name: Upload image URI
         uses: actions/upload-artifact@v7
         with:
