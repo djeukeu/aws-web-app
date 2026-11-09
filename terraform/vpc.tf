@@ -128,7 +128,7 @@ resource "aws_lb" "ecs_alb" {
       enabled = true
     }
 
-  # depends_on = [aws_s3_bucket_policy.s3_policy]
+  depends_on = [aws_s3_bucket_policy.s3_policy]
 }
 
 resource "aws_lb_listener" "alb_listener" {
