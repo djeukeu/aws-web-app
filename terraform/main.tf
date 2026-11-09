@@ -1,4 +1,4 @@
-data "aws_caller_identity" "current" {}
+# data "aws_caller_identity" "current" {}
 
 resource "aws_ecr_repository" "ecr_repo" {
   name                 = "${var.app_name}-repo"
@@ -8,9 +8,6 @@ resource "aws_ecr_repository" "ecr_repo" {
   image_scanning_configuration {
     scan_on_push = true
   }
-
-  tags = local.common_tags
-
 }
 
 resource "aws_ecs_cluster" "ecs_cluster" {
@@ -21,23 +18,34 @@ resource "aws_ecs_cluster" "ecs_cluster" {
     value = "enhanced"
   }
 
-  tags = local.common_tags
+  # configuration {
+  #   execute_command_configuration {
+  #     kms_key_id = aws_kms_key.example.arn
+  #     logging    = "OVERRIDE"
+
+  #     log_configuration {
+  #       cloud_watch_encryption_enabled = true
+  #       cloud_watch_log_group_name     = aws_cloudwatch_log_group.example.name
+  #     }
+  #   }
+  # }
+
 }
 
-resource "aws_ecs_cluster_capacity_providers" "ecs_capacity_providers" {
-  cluster_name       = aws_ecs_cluster.ecs_cluster.name
-  capacity_providers = ["FARGATE", "FARGATE_SPOT"]
+# resource "aws_ecs_cluster_capacity_providers" "ecs_capacity_providers" {
+#   cluster_name       = aws_ecs_cluster.ecs_cluster.name
+#   capacity_providers = ["FARGATE", "FARGATE_SPOT"]
 
-  default_capacity_provider_strategy {
-    base              = var.desired_count
-    weight            = 100
-    capacity_provider = "FARGATE"
-  }
+#   default_capacity_provider_strategy {
+#     base              = var.desired_count
+#     weight            = 100
+#     capacity_provider = "FARGATE"
+#   }
 
-}
+# }
 
 resource "aws_ecs_task_definition" "ecs_service_task_def" {
-  family                   = var.app_name
+  family                   = "${var.app_name}-task-def"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = 256
@@ -73,7 +81,6 @@ resource "aws_ecs_task_definition" "ecs_service_task_def" {
     operating_system_family = "LINUX"
   }
 
-  tags = local.common_tags
 }
 
 resource "aws_ecs_service" "ecs_service" {
@@ -82,10 +89,16 @@ resource "aws_ecs_service" "ecs_service" {
   task_definition                    = aws_ecs_task_definition.ecs_service_task_def.arn
   desired_count                      = var.desired_count
   availability_zone_rebalancing      = "ENABLED"
-  deployment_maximum_percent         = 200
-  deployment_minimum_healthy_percent = 100
+  # deployment_maximum_percent         = 200
+  # deployment_minimum_healthy_percent = 100
   force_delete                       = true
   launch_type                        = "FARGATE"
+
+  capacity_provider_strategy {
+    base              = var.desired_count
+    weight            = 100
+    capacity_provider = "FARGATE"
+  }
 
   network_configuration {
     subnets          = values(aws_subnet.public_subnet)[*].id
@@ -112,6 +125,4 @@ resource "aws_ecs_service" "ecs_service" {
   }
 
   depends_on = [aws_lb_listener.alb_listener]
-
-  tags = local.common_tags
 }

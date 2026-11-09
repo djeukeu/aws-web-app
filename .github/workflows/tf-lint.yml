@@ -1,5 +1,5 @@
-name: TF Lint
-run-name: ${{ github.actor }} triggered the TF lint ci
+name: TF Lint and Policy Check CI
+run-name: ${{ github.actor }} triggered the TF lint & Policy Check CI
 
 on:
   push:

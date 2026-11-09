@@ -3,8 +3,6 @@ resource "aws_vpc" "vpc" {
   instance_tenancy     = "default"
   enable_dns_support   = true
   enable_dns_hostnames = true
-
-  tags = local.common_tags
 }
 
 data "aws_availability_zones" "az_available" {
@@ -19,19 +17,14 @@ resource "aws_subnet" "public_subnet" {
   availability_zone = each.value
   cidr_block = cidrsubnet(
     aws_vpc.vpc.cidr_block,
-    8,
+    4,
     index(data.aws_availability_zones.az_available.names, each.value)
   )
   map_public_ip_on_launch = true
-
-  tags = local.common_tags
-
 }
 
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.vpc.id
-
-  tags = local.common_tags
 }
 
 resource "aws_route_table" "public_route_table" {
@@ -41,39 +34,13 @@ resource "aws_route_table" "public_route_table" {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.igw.id
   }
-
-  tags = local.common_tags
-
 }
 
-resource "aws_route_table_association" "public_subnet_route_association" {
+resource "aws_route_table_association" "public_rtb_association" {
   for_each       = aws_subnet.public_subnet
   subnet_id      = each.value.id
   route_table_id = aws_route_table.public_route_table.id
-
 }
-
-resource "aws_lb_target_group" "ecs_alb_tg" {
-  name        = "${var.app_name}-alb-tg"
-  port        = 80
-  protocol    = "HTTP"
-  vpc_id      = aws_vpc.vpc.id
-  target_type = "ip"
-
-  health_check {
-    path                = "/"
-    port                = "traffic-port"
-    protocol            = "HTTP"
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-    timeout             = 5
-    interval            = 30
-    matcher             = "200"
-  }
-
-  tags = local.common_tags
-}
-
 
 resource "aws_security_group" "ecs_service_sg" {
   name        = "${var.app_name}-ecs-sg"
@@ -93,8 +60,6 @@ resource "aws_security_group" "ecs_service_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  tags = local.common_tags
 }
 
 
@@ -116,8 +81,25 @@ resource "aws_security_group" "alb_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
 
-  tags = local.common_tags
+resource "aws_lb_target_group" "ecs_alb_tg" {
+  name        = "${var.app_name}-alb-tg"
+  port        = 80
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.vpc.id
+  target_type = "ip"
+
+  health_check {
+    path                = "/"
+    port                = "traffic-port"
+    protocol            = "HTTP"
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+    timeout             = 30
+    interval            = 60
+    matcher             = "200"
+  }
 
 }
 
@@ -128,27 +110,25 @@ resource "aws_lb" "ecs_alb" {
   security_groups    = [aws_security_group.alb_sg.id]
   subnets            = values(aws_subnet.public_subnet)[*].id
 
-  access_logs {
-    bucket  = aws_s3_bucket.s3.id
-    prefix  = "alb-access-logs"
-    enabled = true
-  }
+#   access_logs {
+#     bucket  = aws_s3_bucket.s3.id
+#     prefix  = "alb-access-logs"
+#     enabled = true
+#   }
 
-  connection_logs {
-    bucket  = aws_s3_bucket.s3.id
-    prefix  = "alb-connection-logs"
-    enabled = true
-  }
+#   connection_logs {
+#     bucket  = aws_s3_bucket.s3.id
+#     prefix  = "alb-connection-logs"
+#     enabled = true
+#   }
 
-  health_check_logs {
-    bucket  = aws_s3_bucket.s3.id
-    prefix  = "alb-healthcheck-logs"
-    enabled = true
-  }
+#   health_check_logs {
+#     bucket  = aws_s3_bucket.s3.id
+#     prefix  = "alb-healthcheck-logs"
+#     enabled = true
+#   }
 
-  depends_on = [aws_s3_bucket_policy.s3_policy]
-
-  tags = local.common_tags
+  # depends_on = [aws_s3_bucket_policy.s3_policy]
 }
 
 resource "aws_lb_listener" "alb_listener" {
@@ -161,5 +141,4 @@ resource "aws_lb_listener" "alb_listener" {
     target_group_arn = aws_lb_target_group.ecs_alb_tg.arn
   }
 
-  tags = local.common_tags
 }
