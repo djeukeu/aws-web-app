@@ -74,7 +74,14 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE }}
           aws-region: ${{ secrets.AWS_REGION }}
+      - name: Download image URI
+        uses: actions/download-artifact@v7
+        with:
+          name: image-uri
+          path: ./terraform
       - name: Terraform Init
         run: terraform init
       - name: Terraform Apply
-        run: terraform apply -input=false -auto-approve -var="container_image=${{ needs.build_and_push_image.outputs.image_uri }}"
+        run: |
+          IMAGE_URI=$(cat image_uri.txt)
+          terraform apply -input=false -auto-approve -var="container_image=$IMAGE_URI"

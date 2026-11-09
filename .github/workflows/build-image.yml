@@ -7,9 +7,6 @@ on:
       repository_name:
         type: string
         required: true
-    outputs:
-      image_uri:
-        value: ${{jobs.build_image.outputs.image_uri}}
     secrets:
       AWS_ROLE:
         required: true
@@ -23,8 +20,6 @@ permissions:
 jobs:
   build_image:
     runs-on: ubuntu-26.04
-    outputs:
-      image_uri: ${{ steps.build.outputs.image_uri }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -51,7 +46,6 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE }}
           aws-region: ${{ secrets.AWS_REGION }}
-          mask-aws-account-id: false
       - name: Login to AWS ECR
         uses: aws-actions/amazon-ecr-login@v2
         id: login-ecr
@@ -64,4 +58,10 @@ jobs:
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "image_uri=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "image_uri=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" > image_uri.txt
+      - name: Upload image URI
+        uses: actions/upload-artifact@v7
+        with:
+          name: image-uri
+          path: image_uri.txt
+          retention-days: 1
