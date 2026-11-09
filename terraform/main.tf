@@ -89,16 +89,10 @@ resource "aws_ecs_service" "ecs_service" {
   task_definition                    = aws_ecs_task_definition.ecs_service_task_def.arn
   desired_count                      = var.desired_count
   availability_zone_rebalancing      = "ENABLED"
-  # deployment_maximum_percent         = 200
-  # deployment_minimum_healthy_percent = 100
+  deployment_maximum_percent         = 200
+  deployment_minimum_healthy_percent = 100
   force_delete                       = true
   launch_type                        = "FARGATE"
-
-  capacity_provider_strategy {
-    base              = var.desired_count
-    weight            = 100
-    capacity_provider = "FARGATE"
-  }
 
   network_configuration {
     subnets          = values(aws_subnet.public_subnet)[*].id
