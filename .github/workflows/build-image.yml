@@ -1,17 +1,30 @@
-name: Build and Deploy Web app Image
-run-name: ${{ github.actor }} triggered the build image deployment
+name: Build, Scan and Push Image
+run-name: ${{ github.actor }} triggered the Build, Scan and Push Image workflow
 
 on:
-  push:
-    branches:
-      - master
+  workflow_call:
+    inputs:
+      repository_name:
+        type: string
+        required: true
+    outputs:
+      image_uri:
+        value: ${{jobs.build_deploy.outputs.image_uri}}
+    secrets:
+      AWS_ROLE:
+        required: true
+      AWS_REGION:
+        required: true
 
 permissions:
   id-token: write
+  contents: read
 
 jobs:
   build_deploy:
     runs-on: ubuntu-26.04
+    outputs:
+      image_uri: ${{ steps.build.outputs.image_uri }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -29,8 +42,8 @@ jobs:
       - name: Setup Nodejs
         uses: actions/setup-node@v6
         with:
-            node-version-file: '.nvmrc'
-            cache: 'yarn' 
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
       - name: Install project dependencies
         run: yarn
       - name: Configure AWS credentials
@@ -42,10 +55,12 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
         id: login-ecr
       - name: Build, tag, and push image to Amazon ECR
+        id: build
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          ECR_REPOSITORY: ${{ inputs.repository_name }}
           IMAGE_TAG: ${{ steps.gitversion.outputs.major }}.${{ steps.gitversion.outputs.minor }}.${{ steps.gitversion.outputs.commitsSinceVersionSource }}
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image_uri=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"

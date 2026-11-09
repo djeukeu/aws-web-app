@@ -1,0 +1,80 @@
+name: Provision Infrastructure and Deploy Application
+run-name: ${{ github.actor }} triggered the Provision Infrastructure and Deploy Application workflow
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  TF_VAR_app_name: ${{ secrets.TF_VAR_APP_NAME }}
+  TF_VAR_aws_region: ${{ secrets.TF_VAR_AWS_REGION }}
+  TF_VAR_environment: ${{ secrets.TF_VAR_ENVIRONMENT }}
+  TF_VAR_desired_count: ${{ secrets.TF_VAR_DESIRED_COUNT }}
+  TF_VERSION: 1.16.1
+
+jobs:
+  ecr_deploy:
+    runs-on: ubuntu-26.04
+    defaults:
+      run:
+        working-directory: ./terraform
+    outputs:
+      repository_name: ${{ steps.tf_out.outputs.repository_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Terraform Init
+        run: terraform init
+      - name: Provision ECR
+        run: terraform apply -input=false -target=aws_ecr_repository.ecr_repo -auto-approve -var="container_image="
+      - name: Read ECR output
+        id: tf_out
+        run: echo "repository_name=$(terraform output -raw ecr_repo_name)" >> "$GITHUB_OUTPUT"
+  build_and_push_image:
+    needs: ecr_deploy
+    uses: ./.github/workflows/build-image.yml
+    with:
+      repository_name: ${{ needs.ecr_deploy.outputs.repository_name }}
+    secrets:
+      AWS_ROLE: ${{ secrets.AWS_ROLE }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+  infrastructure_deploy:
+    needs: [ecr_deploy, build_and_push_image]
+    runs-on: ubuntu-26.04
+    defaults:
+      run:
+        working-directory: ./terraform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Terraform Init
+        run: terraform init
+      - name: Terraform Apply
+        run: terraform apply -input=false -auto-approve -var="container_image=${{ needs.build_and_push_image.outputs.image_uri }}"

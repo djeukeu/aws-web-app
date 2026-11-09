@@ -1,8 +1,8 @@
-# output "ecr_repo_name" {
-#   value = {
-#     name = aws_ecr_repository.ecr_repo.name
-#   }
-# }
+output "ecr_repo_name" {
+  value = {
+    name = aws_ecr_repository.ecr_repo.name
+  }
+}
 
 # output "alb_dn_name" {
 #   value = {
