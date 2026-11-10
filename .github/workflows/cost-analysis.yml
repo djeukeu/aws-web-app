@@ -9,7 +9,7 @@ on:
         #     - 'terraform/**'
 
 jobs:
-  infracost:
+  cose_analysis:
     runs-on: ubuntu-26.04
     container: ghcr.io/infracost/ci:2
     permissions:
