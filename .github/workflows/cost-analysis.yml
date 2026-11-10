@@ -11,9 +11,6 @@ on:
 jobs:
   cost_analysis:
     runs-on: ubuntu-26.04
-    defaults:
-      run:
-        working-directory: ./terraform
     container: ghcr.io/infracost/ci:2
     permissions:
       contents: read
