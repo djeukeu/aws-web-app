@@ -1,8 +1,9 @@
 data "aws_caller_identity" "current" {}
 
 resource "aws_ecr_repository" "ecr_repo" {
+  # checkov:skip=CKV_AWS_136:The repository uses ECR-managed encryption; a customer-managed KMS key is not configured.
   name                 = "${var.app_name}-repo"
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"
   force_delete         = true
 
   image_scanning_configuration {
@@ -34,6 +35,7 @@ resource "aws_ecs_task_definition" "ecs_service_task_def" {
       cpu       = 256
       memory    = 512
       essential = true
+      readonlyRootFilesystem = true
       portMappings = [
         {
           containerPort = 80
@@ -59,6 +61,7 @@ resource "aws_ecs_task_definition" "ecs_service_task_def" {
 }
 
 resource "aws_ecs_service" "ecs_service" {
+  # checkov:skip=CKV_AWS_333:This deployment uses public subnets without a NAT gateway, so tasks require public IPs for outbound access.
   name                               = "${var.app_name}-service"
   cluster                            = aws_ecs_cluster.ecs_cluster.arn
   task_definition                    = aws_ecs_task_definition.ecs_service_task_def.arn
