@@ -1,16 +1,19 @@
-name: Insfrastructure Cost Analysis CI
-run-name: ${{ github.actor }} triggered the Insfrastructure Cost Analysis CI workflow
+name: Infrastructure Cost Analysis CI
+run-name: ${{ github.actor }} triggered the Infrastructure Cost Analysis CI workflow
 
 on: 
     pull_request:
         branches:
             - develop
-        # paths:
-        #     - 'terraform/**'
+        paths:
+            - 'terraform/**'
 
 jobs:
-  cose_analysis:
+  cost_analysis:
     runs-on: ubuntu-26.04
+    defaults:
+      run:
+        working-directory: ./terraform
     container: ghcr.io/infracost/ci:2
     permissions:
       contents: read
