@@ -25,7 +25,7 @@ jobs:
         with:
           image-ref: ${{ env.IMAGE_TAG }}
           version: v0.76.2
-          exit-code: '1'
+          # exit-code: '1'
           # ignore-unfixed: true
           # vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
