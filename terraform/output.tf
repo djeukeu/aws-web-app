@@ -1,5 +1,5 @@
 output "ecr_repo_name" {
-  value       = aws_ecr_repository.ecr_repo.name
+  value = aws_ecr_repository.ecr_repo.name
 }
 
 # output "alb_dn_name" {

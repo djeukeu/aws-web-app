@@ -30,11 +30,11 @@ resource "aws_ecs_task_definition" "ecs_service_task_def" {
 
   container_definitions = jsonencode([
     {
-      name      = var.app_name
-      image     = var.container_image
-      cpu       = 256
-      memory    = 512
-      essential = true
+      name                   = var.app_name
+      image                  = var.container_image
+      cpu                    = 256
+      memory                 = 512
+      essential              = true
       readonlyRootFilesystem = true
       portMappings = [
         {
