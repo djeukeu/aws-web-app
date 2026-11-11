@@ -4,6 +4,7 @@ run-name: ${{ github.actor }} triggered the Provision Infrastructure and Deploy 
 on:
   push:
     branches:
+      - develop
       - master
 
 permissions:
@@ -11,10 +12,11 @@ permissions:
   contents: read
 
 env:
-  TF_VAR_app_name: ${{ vars.TF_VAR_APP_NAME }}
+  TF_VAR_app_name: ${{ github.ref_name == 'master' && vars.TF_VAR_APP_NAME || format('{0}-stage', vars.TF_VAR_APP_NAME) }}
   TF_VAR_aws_region: ${{ vars.TF_VAR_AWS_REGION }}
-  TF_VAR_environment: ${{ vars.TF_VAR_ENVIRONMENT }}
+  TF_VAR_environment: ${{ github.ref_name == 'master' && 'prod' || 'stage' }}
   TF_VAR_desired_count: ${{ vars.TF_VAR_DESIRED_COUNT }}
+  TF_STATE_KEY: ${{ github.ref_name == 'master' && 'aws-web-app/terraform.tfstate' || 'aws-web-app/stage/terraform.tfstate' }}
   TF_VERSION: 1.16.1
 
 jobs:
@@ -40,7 +42,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE }}
           aws-region: ${{ secrets.AWS_REGION }}
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -backend-config="key=$TF_STATE_KEY"
       - name: Provision ECR
         run: terraform apply -input=false -target=aws_ecr_repository.ecr_repo -auto-approve -var="container_image="
       - name: Read ECR output
@@ -80,7 +82,7 @@ jobs:
           name: image-uri
           path: ./terraform
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -backend-config="key=$TF_STATE_KEY"
       - name: Terraform Apply
         run: |
           IMAGE_URI=$(cat image_uri.txt)

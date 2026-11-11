@@ -9,7 +9,6 @@ terraform {
   }
   backend "s3" {
     bucket       = "djeukeu-terraform-state"
-    key          = "aws-web-app/terraform.tfstate"
     region       = "us-east-2"
     use_lockfile = true
   }
