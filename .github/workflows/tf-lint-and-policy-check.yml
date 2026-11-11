@@ -1,0 +1,58 @@
+name: TF Lint and Policy Check CI
+run-name: ${{ github.actor }} triggered the TF lint & Policy Check CI
+
+on:
+  push:
+    branches:
+      - develop
+      - master
+    paths:
+      - 'terraform/**'
+  pull_request:
+    branches:
+      - develop
+      - master
+    paths:
+      - 'terraform/**'
+
+jobs:
+  tf_lint:
+    runs-on: ubuntu-26.04
+    defaults:
+      run:
+        working-directory: ./terraform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version_file: .tflint-version
+          cache: true
+      - name: TFLint Init
+        run: tflint --init
+      - name: TFLint
+        run: |
+          tflint
+  tf_policy_check:
+    runs-on: ubuntu-26.04
+    defaults:
+      run:
+        working-directory: ./terraform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: ./
+          quiet: true
+          framework: terraform 

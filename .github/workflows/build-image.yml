@@ -1,0 +1,76 @@
+name: Build, Scan and Push Image
+run-name: ${{ github.actor }} triggered the Build, Scan and Push Image workflow
+
+on:
+  workflow_call:
+    inputs:
+      repository_name:
+        type: string
+        required: true
+    secrets:
+      AWS_ROLE:
+        required: true
+      AWS_REGION:
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build_image:
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Setup Gitversion
+        uses: gittools/actions/gitversion/setup@v4.5.0
+        with:
+          versionSpec: '6.3.0'
+      - name: Execute Gitversion
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v4.5.0
+        with:
+          configFilePath: GitVersion.yml
+      - name: Setup Nodejs
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+      - name: Install project dependencies
+        run: yarn
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Login to AWS ECR
+        uses: aws-actions/amazon-ecr-login@v2
+        id: login-ecr
+      - name: Tag image
+        id: image-tag
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ inputs.repository_name }}
+          IMAGE_TAG: ${{ steps.gitversion.outputs.major }}.${{ steps.gitversion.outputs.minor }}.${{ steps.gitversion.outputs.commitsSinceVersionSource }}
+        run: echo "uri=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+      - name: Build image
+        run: docker build -t ${{ steps.image-tag.outputs.uri }} .
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ steps.image-tag.outputs.uri }}
+          version: v0.76.2
+          severity: 'CRITICAL,HIGH'
+      - name: Push image to Amazon ECR
+        run: docker push ${{ steps.image-tag.outputs.uri }}
+      - name: Write image URI
+        run: echo "${{ steps.image-tag.outputs.uri }}" > image_uri.txt
+      - name: Upload image URI
+        uses: actions/upload-artifact@v7
+        with:
+          name: image-uri
+          path: image_uri.txt
+          retention-days: 1

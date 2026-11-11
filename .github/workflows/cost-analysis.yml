@@ -1,0 +1,31 @@
+name: Infrastructure Cost Analysis CI
+run-name: ${{ github.actor }} triggered the Infrastructure Cost Analysis CI workflow
+
+on: 
+    pull_request:
+        branches:
+            - develop
+            - master
+        paths:
+            - 'terraform/**'
+
+jobs:
+  cost_analysis:
+    runs-on: ubuntu-26.04
+    container: ghcr.io/infracost/ci:2
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      INFRACOST_CLI_AUTHENTICATION_TOKEN: ${{ secrets.INFRACOST_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: head
+      - run: infracost-ci diff --base-path base --head-path head
