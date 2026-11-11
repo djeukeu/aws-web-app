@@ -16,7 +16,7 @@ on:
       - 'terraform/**'
 
 jobs:
-  lint:
+  tf_lint:
     runs-on: ubuntu-26.04
     defaults:
       run:
@@ -36,7 +36,7 @@ jobs:
       - name: TFLint
         run: |
           tflint
-  policy-check:
+  tf_policy_check:
     runs-on: ubuntu-26.04
     defaults:
       run:

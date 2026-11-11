@@ -1,0 +1,36 @@
+name: Scan Image CI
+run-name: ${{ github.actor }} triggered the Scan Image CI workflow
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - master
+
+env:
+  IMAGE_TAG: docker.io/${{vars.TF_VAR_APP_NAME}}:${{ github.sha }}
+
+jobs:
+  scan_image:
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Build Image
+        run: docker build -t ${{ env.IMAGE_TAG }} .
+      - name: Setup Trivy
+        uses: aquasecurity/setup-trivy@v0.2.0
+        with:
+          cache: true
+          version: v0.76.2
+      - name: Run Trivy 
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE_TAG }}
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
