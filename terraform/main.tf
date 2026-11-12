@@ -21,6 +21,7 @@ resource "aws_ecs_cluster" "ecs_cluster" {
 }
 
 resource "aws_ecs_task_definition" "ecs_service_task_def" {
+  # checkov:skip=CKV_AWS_336:The current container image has not been validated for read-only root filesystem operation.
   family                   = "${var.app_name}-task-def"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
