@@ -56,34 +56,34 @@ jobs:
     secrets:
       AWS_ROLE: ${{ secrets.AWS_ROLE }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
-  infrastructure_deploy:
-    needs: [ecr_deploy, build_and_push_image]
-    runs-on: ubuntu-26.04
-    defaults:
-      run:
-        working-directory: ./terraform
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v6
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE }}
-          aws-region: ${{ secrets.AWS_REGION }}
-      - name: Download image URI
-        uses: actions/download-artifact@v7
-        with:
-          name: image-uri
-          path: ./terraform
-      - name: Terraform Init
-        run: terraform init -backend-config="key=$TF_STATE_KEY"
-      - name: Terraform Apply
-        run: |
-          IMAGE_URI=$(cat image_uri.txt)
-          terraform apply -input=false -auto-approve -var="container_image=$IMAGE_URI"
+  # infrastructure_deploy:
+  #   needs: [ecr_deploy, build_and_push_image]
+  #   runs-on: ubuntu-26.04
+  #   defaults:
+  #     run:
+  #       working-directory: ./terraform
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v7
+  #       with:
+  #         fetch-depth: 0
+  #     - name: Setup Terraform
+  #       uses: hashicorp/setup-terraform@v4
+  #       with:
+  #         terraform_version: ${{ env.TF_VERSION }}
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@v6
+  #       with:
+  #         role-to-assume: ${{ secrets.AWS_ROLE }}
+  #         aws-region: ${{ secrets.AWS_REGION }}
+  #     - name: Download image URI
+  #       uses: actions/download-artifact@v7
+  #       with:
+  #         name: image-uri
+  #         path: ./terraform
+  #     - name: Terraform Init
+  #       run: terraform init -backend-config="key=$TF_STATE_KEY"
+  #     - name: Terraform Apply
+  #       run: |
+  #         IMAGE_URI=$(cat image_uri.txt)
+  #         terraform apply -input=false -auto-approve -var="container_image=$IMAGE_URI"
